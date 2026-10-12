@@ -1,0 +1,2840 @@
+-- leaked by vhck
+game.Players.LocalPlayer:SetAttribute("RG", "YJMZg8bAH8")
+
+
+getgenv().d84jdnmasjdh43d = true
+local playersService = game:GetService("Players")
+function GetKey()
+    if playersService.LocalPlayer:GetAttribute("RG") == "YJMZg8bAH8" then
+        return "Xana"
+    end
+end
+if GetKey() ~= "Xana" then
+    keySystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/BlizTBr/scripts/main/Key%20System"))()
+end
+local orionXHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/BlizTBr/scripts/main/Orion%20X"))()
+local debrisService = game:GetService("Debris")
+local workspaceService = game:GetService("Workspace")
+local lightingService = game:GetService("Lighting")
+local tweenService = game:GetService("TweenService")
+local userInputService = game:GetService("UserInputService")
+local replicatedStorageService = game:GetService("ReplicatedStorage")
+local replicatedFirstService = game:GetService("ReplicatedFirst")
+local contextActionService = game:GetService("ContextActionService")
+local runService = game:GetService("RunService")
+local virtualUserService = game:GetService("VirtualUser")
+local characterEventsFolder = replicatedStorageService:WaitForChild("CharacterEvents")
+local localPlayer = playersService.LocalPlayer
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+localPlayer:GetMouse()
+local spawnedInToysFolder = workspaceService:WaitForChild(localPlayer.Name .. "SpawnedInToys")
+local isInPlotValue = localPlayer:WaitForChild("InPlot")
+local toysLimitCapValue = localPlayer:WaitForChild("ToysLimitCap")
+local usedToyPointsValue = localPlayer:WaitForChild("UsedToyPoints")
+SpawnToyRF = replicatedStorageService:WaitForChild("MenuToys"):WaitForChild("SpawnToyRemoteFunction")
+DeleteToyRE = replicatedStorageService:WaitForChild("MenuToys"):WaitForChild("DestroyToy")
+BuyToy = replicatedStorageService:WaitForChild("MenuToys"):WaitForChild("BuyToyRemoteFunction")
+BombEvents = replicatedStorageService:WaitForChild("BombEvents")
+function ActionEvent(actionName, actionState)
+    local controlsGui = playerGui:FindFirstChild("ControlsGui")
+    local actionEvent = controlsGui and controlsGui:FindFirstChild("ActionEvent")
+    if actionEvent then
+        actionEvent:Fire(actionName, actionState)
+    end
+end
+typeAnimation = replicatedFirstService.Typing.Type
+flailAnimation = replicatedFirstService.ThrowPlayers.Flail
+local createGrabLineEvent = replicatedStorageService:WaitForChild("GrabEvents"):WaitForChild("CreateGrabLine")
+local destroyGrabLineEvent = replicatedStorageService:WaitForChild("GrabEvents"):WaitForChild("DestroyGrabLine")
+local setNetworkOwnerEvent = replicatedStorageService:WaitForChild("GrabEvents"):WaitForChild("SetNetworkOwner")
+local extendGrabLineRemoteEvent = replicatedStorageService:WaitForChild("GrabEvents"):WaitForChild("ExtendGrabLine")
+local ragdollRemoteEvent = characterEventsFolder:WaitForChild("RagdollRemote")
+ChatTypingBoard = characterEventsFolder:WaitForChild("ChatTyping")
+local sayMessageRequestEvent
+if replicatedStorageService:FindFirstChild("DefaultChatSystemChatEvents") and replicatedStorageService.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest") then
+    sayMessageRequestEvent = replicatedStorageService.DefaultChatSystemChatEvents.SayMessageRequest
+else
+    sayMessageRequestEvent = nil
+end
+local updateLineColorsEvent = replicatedStorageService:WaitForChild("DataEvents"):WaitForChild("UpdateLineColorsEvent")
+local isHeldValue = localPlayer:WaitForChild("IsHeld")
+local playerScriptsFolder = localPlayer:WaitForChild("PlayerScripts")
+local heldObjectName = nil
+local struggleEvent = characterEventsFolder:WaitForChild("Struggle")
+anticreatelinelocalscript = playerScriptsFolder:WaitForChild("CharacterAndBeamMove")
+localPlayer.Changed:Connect(function(userIdString)
+    if userIdString == "userId" or userIdString == "UserId" then
+        while true do
+        end
+    else
+        return
+    end
+end)
+function Type(data)
+    sayMessageRequestEvent:FireServer(data, "All")
+end
+local function showNotification(notificationContent)
+    orionXHub:MakeNotification({
+        Name = "Bliz_T HUB Renamed by Itsjose4",
+        Content = notificationContent,
+        Image = "rbxassetid://16570630989",
+        Time = 5
+    })
+end
+function IsSolara()
+    if getexecutorname then
+        local executorName = getexecutorname()
+        if executorName and string.find(executorName, "Solara") then
+            return true
+        end
+    end
+end
+function WaitForAttribute(attributeInstance, attributeName, duration)
+    local startTime = os.clock()
+    local timeoutDuration = duration or 10
+    while timeoutDuration > os.clock() - startTime do
+        game:GetService("RunService").Heartbeat:Wait()
+        if attributeInstance:GetAttribute(attributeName) ~= nil then
+            break
+        end
+    end
+    return attributeInstance:GetAttribute(attributeName)
+end
+function CheckToyLimit(delay, condition, data)
+    local additionalPoints = delay or 0
+    local isOverLimit = (usedToyPointsValue.Value + additionalPoints) / toysLimitCapValue.Value > 1
+    if condition and typeof(data) == "table" then
+        local spawnedToysFolder = spawnedInToysFolder
+        local iteratorFunction, childrenIterator, index = pairs(spawnedToysFolder:GetChildren())
+        while true do
+            local childInstance
+            index, childInstance = iteratorFunction(childrenIterator, index)
+            if index == nil then
+                break
+            end
+            local iteratorFunction2, dataIterator, index2 = pairs(data)
+            while true do
+                local modelName
+                index2, modelName = iteratorFunction2(dataIterator, index2)
+                if index2 == nil then
+                    break
+                end
+                if childInstance:IsA("Model") and (childInstance.Name ~= modelName and (not WaitForAttribute(childInstance, "Connected2", 1) and (usedToyPointsValue.Value + additionalPoints) / toysLimitCapValue.Value > 1)) then
+                    DeleteToyRE:FireServer(childInstance)
+                end
+            end
+        end
+    end
+    return isOverLimit
+end
+function IsMobile()
+    if localPlayer.PlayerGui:FindFirstChild("ContextActionGui") then
+        return true
+    end
+end
+IsUsingSolara = IsSolara()
+if IsUsingSolara then
+    print("new proximity promp created!")
+    getgenv().fireproximityprompt = function(proximityPrompt)
+        if proximityPrompt.Name ~= "ProximityPrompt" then
+            error("retard: " .. Obj.Name)
+        else
+            local holdDuration = proximityPrompt.HoldDuration
+            local maxActivationDistance = proximityPrompt.MaxActivationDistance
+            proximityPrompt.MaxActivationDistance = math.huge
+            proximityPrompt.HoldDuration = 0
+            proximityPrompt:InputHoldBegin()
+            proximityPrompt:InputHoldEnd()
+            proximityPrompt.HoldDuration = holdDuration
+            proximityPrompt.MaxActivationDistance = maxActivationDistance
+        end
+    end
+end
+local adminDataMap = {}
+function checkadminData(item)
+    if table.find(adminDataMap, item) then
+        return true
+    end
+end
+spawnToyThread = coroutine.create(function()
+    while true do
+        repeat
+            local yieldedData = coroutine.yield()
+        until typeof(yieldedData) == "table"
+        SpawnToyRF:InvokeServer(unpack(yieldedData))
+    end
+end)
+function SpawnToy(toyData, shouldSpawn)
+    if (shouldSpawn or not isInPlotValue.Value) and true or false then
+        coroutine.resume(spawnToyThread, toyData)
+    end
+end
+local function getGroupRank(playerInstance, groupId)
+    if typeof(playerInstance) == "Instance" and playerInstance.Parent then
+        local lastTimeRankUpdate = playerInstance:GetAttribute("LastTimeRankUpdate")
+        if not lastTimeRankUpdate or lastTimeRankUpdate and os.clock() - lastTimeRankUpdate >= 300 then
+            local success, rank = pcall(function()
+                return playerInstance:GetRankInGroup(groupId)
+            end)
+            local _, groupRole = pcall(function()
+                return playerInstance:GetRoleInGroup(groupId)
+            end)
+            local playerRank = not success and "Common" or rank
+            if playerRank == 255 then
+                playerInstance:SetAttribute("Rank", "Leader")
+            elseif playerRank == 4 then
+                if groupRole == "High Rank Admin" then
+                    playerInstance:SetAttribute("Rank", "High Rank Admin")
+                end
+            elseif playerRank == 3 then
+                playerInstance:SetAttribute("Rank", "Low Rank Admin")
+            elseif playerRank == 2 then
+                playerInstance:SetAttribute("Rank", "Goon")
+            elseif playerRank == 0 or playerRank == 1 then
+                playerInstance:SetAttribute("Rank", "Common")
+            end
+            playerInstance:SetAttribute("LastTimeRankUpdate", os.clock())
+        end
+        local _ = playerInstance.GetAttribute
+    end
+end
+local function isAuthorized(targetInstance)
+    if typeof(targetInstance) ~= "Instance" then
+        targetInstance = nil
+    elseif targetInstance:IsA("Model") and targetInstance:FindFirstChildOfClass("Humanoid") and playersService:GetPlayerFromCharacter(targetInstance) then
+        targetInstance = playersService:GetPlayerFromCharacter(targetInstance)
+    elseif not targetInstance:IsA("Player") then
+        return
+    end
+    local isAdmin = false
+    if targetInstance then
+        local groupRank = getGroupRank(targetInstance, 16168861)
+        local isAdmin = (groupRank == "Leader" or (groupRank == "High Rank Admin" or (groupRank == "Low Rank Admin" or groupRank == "Goon"))) and true or isAdmin
+        if checkadminData(targetInstance.Name) and not adminDataMap[targetInstance.Name].Protection then
+            isAdmin = false
+        end
+        return isAdmin
+    end
+end
+function IsHoldingAdminPlayer()
+    local grabPartsFolder = workspaceService:FindFirstChild("GrabParts")
+    if grabPartsFolder and grabPartsFolder:FindFirstChild("GrabPart") and grabPartsFolder.GrabPart:FindFirstChild("WeldConstraint") then
+        local part1 = grabPartsFolder.GrabPart.WeldConstraint.Part1
+        if part1 and isAuthorized(part1.Parent) then
+            return true
+        end
+    end
+end
+function WhatIsHolding(grabbedObject)
+    if grabbedObject and grabbedObject:FindFirstChild("GrabPart") and grabbedObject.GrabPart:FindFirstChild("WeldConstraint") then
+        local part1 = grabbedObject.GrabPart.WeldConstraint.Part1
+        if part1 and part1.Parent and part1.Parent:IsA("Model") then
+            local parent = part1.Parent
+            return playersService:GetPlayerFromCharacter(part1.Parent) and "Player" or (parent:FindFirstChild("Pet") and "Follow NPC" or "Object")
+        end
+    end
+end
+function tableAlphabeticOrder(stringA, stringB)
+    return stringA:lower() < stringB:lower()
+end
+local function refreshPlayerList(uiElement)
+    local playersService = playersService
+    local playerIterator, playerIterator3, playerIndex = pairs(playersService:GetPlayers())
+    local playerNamesList = {}
+    while true do
+        local player
+        playerIndex, player = playerIterator(playerIterator3, playerIndex)
+        if playerIndex == nil then
+            break
+        end
+        if player.UserId ~= localPlayer.UserId then
+            table.insert(playerNamesList, player.Name .. " " .. "(" .. player.DisplayName .. ")")
+        end
+    end
+    table.sort(playerNamesList, tableAlphabeticOrder)
+    uiElement:Refresh(playerNamesList, true)
+end
+local playerList = {}
+local processedInstances = {}
+local function refreshStringList(uiElement, tableToIterate)
+    local stringIterator, stringIteratorState, stringIndex = pairs(tableToIterate)
+    local playerNames = {}
+    while true do
+        local stringItem
+        stringIndex, stringItem = stringIterator(stringIteratorState, stringIndex)
+        if stringIndex == nil then
+            break
+        end
+        if typeof(stringItem) == "string" then
+            table.insert(playerNames, stringItem)
+        end
+    end
+    uiElement:Refresh(playerNames, true)
+end
+local function updatePlayerList(uiElement)
+    local playersService2 = playersService
+    local playerIterator2, playerIterator4, playerIndex2 = pairs(playersService2:GetPlayers())
+    local playerNameList = {}
+    while true do
+        local playerInstance
+        playerIndex2, playerInstance = playerIterator2(playerIterator4, playerIndex2)
+        if playerIndex2 == nil then
+            break
+        end
+        if playerInstance.UserId ~= localPlayer.UserId then
+            table.insert(playerNameList, playerInstance.Name .. " " .. "(" .. playerInstance.DisplayName .. ")")
+        end
+    end
+    table.sort(playerNameList, tableAlphabeticOrder)
+    table.insert(playerNameList, 1, localPlayer.Name .. " " .. "(" .. localPlayer.DisplayName .. ")")
+    uiElement:Refresh(playerNameList, true)
+end
+function lookAt(startPosition, targetPosition)
+    local directionVector = (targetPosition - startPosition).Unit
+    local rightVector = directionVector:Cross((Vector3.new(0, 1, 0)))
+    local upVector = rightVector:Cross(directionVector)
+    return CFrame.fromMatrix(startPosition, rightVector, upVector)
+end
+local function onSpawnToyAction(actionName, inputState, _)
+    if actionName == "Spawn Toy (TAB)" and inputState == Enum.UserInputState.Begin then
+        local spawnToyArguments = {
+            _G.SelectedToy,
+            localPlayer.Character.CamPart.CFrame,
+            Vector3.new(0, localPlayer.Character.CamPart.Orientation.Y, 0)
+        }
+        SpawnToyRF:InvokeServer(unpack(spawnToyArguments))
+    end
+end
+function teleportfunc()
+    local controllingCreature = _G.ControllingCreature or localPlayer.Character
+    local cameraPartName = _G.ControllingCreature and "Head" or (localPlayer.Character and "CamPart" or nil)
+    local hitPart, hitPosition = workspaceService:FindPartOnRayWithIgnoreList(Ray.new(controllingCreature[cameraPartName].Position, localPlayer.Character.CamPart.CFrame.lookVector * 5000), {
+        controllingCreature
+    })
+    if hitPart then
+        controllingCreature.HumanoidRootPart.CFrame = CFrame.new(hitPosition.X, hitPosition.Y + 5, hitPosition.Z)
+    end
+end
+local function onTeleportAction(inputName, inputState, _)
+    if inputName == "Teleport(Z)" and inputState == Enum.UserInputState.Begin then
+        teleportfunc()
+    end
+end
+local function isPlayerWhitelisted(tag)
+    if table.find(processedInstances, tag) then
+        return true
+    end
+end
+local floatSteppedConnection = nil
+local isFloating = nil
+Noclip2 = nil
+Clip2 = nil
+local function startFloating()
+    if not floatSteppedConnection then
+        isFloating = false
+        local function checkCollision()
+            if isFloating == false and game.Players.LocalPlayer.Character ~= nil then
+                local pairsIterator, pairsState, pairsIndex = pairs(game.Players.LocalPlayer.Character:GetChildren())
+                while true do
+                    local hitPart
+                    pairsIndex, hitPart = pairsIterator(pairsState, pairsIndex)
+                    if pairsIndex == nil then
+                        break
+                    end
+                    if hitPart:IsA("BasePart") and (hitPart.CanCollide and hitPart.Name ~= floatName) then
+                        hitPart.CanCollide = false
+                    end
+                end
+            end
+            wait(0.21)
+        end
+        floatSteppedConnection = runService.Stepped:Connect(checkCollision)
+    end
+end
+local function toggleNoclip()
+    if not _G.NoclipToggle then
+        if floatSteppedConnection then
+            floatSteppedConnection:Disconnect()
+            floatSteppedConnection = nil
+        end
+        isFloating = true
+    end
+end
+function countToys(floatName)
+    local children = spawnedInToysFolder
+    local pairsIterator2, childIndex, pairsIndex2 = pairs(children:GetChildren())
+    local partsAnchoredCount = 0
+    while true do
+        local child
+        pairsIndex2, child = pairsIterator2(childIndex, pairsIndex2)
+        if pairsIndex2 == nil then
+            break
+        end
+        if child.Name == floatName then
+            partsAnchoredCount = partsAnchoredCount + 1
+        end
+    end
+    return partsAnchoredCount
+end
+function CheckNetworkOwnerShipOnPlayer(potentialPlayer, condition)
+    if typeof(potentialPlayer) == "Instance" and (potentialPlayer:IsA("Player") and potentialPlayer.Character) and (potentialPlayer.Character:FindFirstChild("Head") and (potentialPlayer.Character.Head:FindFirstChild("PartOwner") and potentialPlayer.Character.Head.PartOwner.Value == localPlayer.Name)) then
+        return not condition and true or potentialPlayer.Character.Head.PartOwner
+    end
+end
+function CheckNetworkOwnerShipPermanentOnPlayer(potentialPlayer, condition)
+    if typeof(potentialPlayer) == "Instance" and (potentialPlayer:IsA("Player") and potentialPlayer.Character) and (potentialPlayer.Character:FindFirstChild("HumanoidRootPart") and (potentialPlayer.Character.HumanoidRootPart:FindFirstChild("FirePlayerPart") and (potentialPlayer.Character.HumanoidRootPart.FirePlayerPart:FindFirstChild("PartOwner") and potentialPlayer.Character.HumanoidRootPart.FirePlayerPart.PartOwner.Value == localPlayer.Name))) then
+        return not condition and true or potentialPlayer.Character.HumanoidRootPart.FirePlayerPart.PartOwner
+    end
+end
+function CheckNetworkOwnerShipOnPart(potentialPart, condition)
+    if typeof(potentialPart) == "Instance" and (potentialPart:FindFirstChild("PartOwner") and potentialPart.PartOwner.Value == localPlayer.Name) then
+        return not condition and true or potentialPart.PartOwner
+    end
+end
+function SNOWship(targetPart)
+    if targetPart and typeof(targetPart) == "Instance" then
+        local distanceFromCharacter = localPlayer:DistanceFromCharacter(targetPart.Position)
+        if localPlayer.Character and (localPlayer.Character:FindFirstChild("HumanoidRootPart") and distanceFromCharacter <= 30) then
+            setNetworkOwnerEvent:FireServer(targetPart, lookAt(localPlayer.Character.HumanoidRootPart.Position, targetPart.Position))
+        end
+    end
+end
+function IsPlayerInsideSafeZone(player)
+    if typeof(player) == "Instance" and (player:IsA("Player") and (player:FindFirstChild("InPlot") and player.InPlot.Value)) then
+        return true
+    end
+end
+function IsPlayerFloating(playerInstance)
+    if typeof(playerInstance) == "Instance" and (playerInstance:IsA("Player") and playerInstance.Character) and (playerInstance.Character:FindFirstChildOfClass("Humanoid") and playerInstance.Character:FindFirstChildOfClass("Humanoid").FloorMaterial == Enum.Material.Air) then
+        return true
+    end
+end
+function CheckPlayerVelocity(playerInstanceVelocity)
+    if typeof(playerInstanceVelocity) == "Instance" and (playerInstanceVelocity:IsA("Player") and playerInstanceVelocity.Character) and playerInstanceVelocity.Character:FindFirstChild("HumanoidRootPart") then
+        return playerInstanceVelocity.Character.HumanoidRootPart.Velocity.Magnitude
+    end
+end
+function SNOWshipOnce(targetPart2)
+    local distanceFromCharacter = localPlayer:DistanceFromCharacter(targetPart2.Position)
+    if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        if CheckNetworkOwnerShipOnPart(targetPart2) then
+            return true
+        end
+        if distanceFromCharacter <= 30 then
+            setNetworkOwnerEvent:FireServer(targetPart2, lookAt(localPlayer.Character.HumanoidRootPart.Position, targetPart2.Position))
+        end
+    end
+end
+function SNOWshipOnceAndCheck(targetPart, defaultDistance)
+    local maxAttempts = defaultDistance or 5
+    local distanceFromCharacter2 = localPlayer:DistanceFromCharacter(targetPart.Position)
+    if not (localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")) then
+        return
+    end
+    if CheckNetworkOwnerShipOnPart(targetPart) then
+        return true
+    end
+    if distanceFromCharacter2 <= 30 then
+        setNetworkOwnerEvent:FireServer(targetPart, lookAt(localPlayer.Character.HumanoidRootPart.Position, targetPart.Position))
+    end
+    local isNetworkOwner = false
+    for _ = 0, maxAttempts do
+        isNetworkOwner = CheckNetworkOwnerShipOnPart(targetPart, true)
+        if isNetworkOwner then
+            break
+        end
+        task.wait()
+    end
+    return isNetworkOwner
+end
+function SNOWshipTrack(targetPart)
+    if targetPart.Parent and targetPart.Parent:IsA("Model") then
+        local targetModel = targetPart.Parent
+        local isOwnershipTrackConnected = targetModel:GetAttribute("OwnershipTrackConnected")
+        local isCreatedConnected2 = targetModel:GetAttribute("CreatedConnected2")
+        if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local distanceFromCharacter = localPlayer:DistanceFromCharacter(targetPart.Position)
+            if isCreatedConnected2 then
+                if isOwnershipTrackConnected then
+                    return true
+                end
+                if distanceFromCharacter <= 30 then
+                    setNetworkOwnerEvent:FireServer(targetPart, lookAt(localPlayer.Character.HumanoidRootPart.Position, targetPart.Position))
+                end
+            else
+                targetModel:SetAttribute("CreatedConnected2", true)
+                print("Create Connection 2")
+                targetModel.DescendantAdded:Connect(function(attribute)
+                    if attribute.Name ~= "PartOwner" or attribute.Value ~= localPlayer.Name then
+                        if attribute.Name == "PartOwner" and attribute.Value ~= localPlayer.Name then
+                            targetModel:SetAttribute("OwnershipTrackConnected", false)
+                        end
+                    else
+                        targetModel:SetAttribute("OwnershipTrackConnected", true)
+                    end
+                end)
+            end
+        end
+    end
+end
+function SNOWshipOnceAndDelete(networkedPart)
+    local distanceFromCharacter = localPlayer:DistanceFromCharacter(networkedPart.Position)
+    local isConnected = networkedPart:GetAttribute("Connected")
+    local createdConnected = networkedPart:GetAttribute("CreatedConnected")
+    if localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        if CheckNetworkOwnerShipOnPart(networkedPart) then
+            networkedPart:SetAttribute("Connected", true)
+            destroyGrabLineEvent:FireServer(networkedPart)
+            if not createdConnected then
+                networkedPart:SetAttribute("CreatedConnected", true)
+                print("Create Connection")
+                networkedPart.ChildAdded:Connect(function(child)
+                    if child.Name == "PartOwner" and child.Value ~= localPlayer.Name then
+                        networkedPart:SetAttribute("Connected", false)
+                    end
+                end)
+            end
+        elseif distanceFromCharacter <= 30 and not isConnected then
+            setNetworkOwnerEvent:FireServer(networkedPart, lookAt(localPlayer.Character.HumanoidRootPart.Position, networkedPart.Position))
+        end
+    end
+end
+function SNOWshipPlayer(otherPlayer, callbackFunction)
+    if localPlayer.Character and (localPlayer.Character:FindFirstChild("HumanoidRootPart") and (typeof(otherPlayer) == "Instance" and (otherPlayer:IsA("Player") and otherPlayer.Character)) and otherPlayer.Character:FindFirstChild("HumanoidRootPart")) then
+        local otherPlayerHumanoidRootPart = otherPlayer.Character.HumanoidRootPart
+        local distanceFromOtherPlayer = localPlayer:DistanceFromCharacter(otherPlayerHumanoidRootPart.Position)
+        if CheckNetworkOwnerShipOnPlayer(otherPlayer) then
+            if type(callbackFunction) == "function" then
+                callbackFunction()
+            end
+            return true
+        end
+        if distanceFromOtherPlayer <= 30 then
+            setNetworkOwnerEvent:FireServer(otherPlayerHumanoidRootPart, lookAt(localPlayer.Character.HumanoidRootPart.Position, otherPlayerHumanoidRootPart.Position))
+        end
+    end
+end
+function SNOWshipPermanentPlayer(otherPlayer, callbackFunction)
+    if localPlayer.Character and (localPlayer.Character:FindFirstChild("HumanoidRootPart") and (typeof(otherPlayer) == "Instance" and (otherPlayer:IsA("Player") and otherPlayer.Character)) and (otherPlayer.Character:FindFirstChild("HumanoidRootPart") and otherPlayer.Character.HumanoidRootPart:FindFirstChild("FirePlayerPart"))) then
+        local firePlayerPart = otherPlayer.Character.HumanoidRootPart.FirePlayerPart
+        local distanceFromFirePlayerPart = localPlayer:DistanceFromCharacter(firePlayerPart.Position)
+        if type(callbackFunction) == "function" then
+            callbackFunction()
+        end
+        if distanceFromFirePlayerPart <= 30 then
+            setNetworkOwnerEvent:FireServer(firePlayerPart, lookAt(localPlayer.Character.HumanoidRootPart.Position, firePlayerPart.Position))
+            return true
+        end
+    end
+end
+function GetPlayerCharacter()
+    if localPlayer.Character and (localPlayer.Character:FindFirstChild("HumanoidRootPart") and localPlayer.Character:FindFirstChildOfClass("Humanoid")) then
+        return localPlayer.Character
+    end
+end
+_G.TP_Priority = 0
+function ChangeActivityPriority(teleportPriority)
+    if _G.TP_Priority <= teleportPriority then
+        _G.TP_Priority = teleportPriority
+        return true
+    end
+    if teleportPriority == 0 then
+        _G.TP_Priority = teleportPriority
+        return true
+    end
+end
+function TeleportPlayer(cframeOffset, teleportPriority)
+    if (teleportPriority == nil and 0 or teleportPriority) == _G.TP_Priority then
+        local playerCharacter = GetPlayerCharacter()
+        if playerCharacter and (not _G.TeleportingToNetworkOwnership and typeof(cframeOffset) == "CFrame") then
+            local humanoidRootPart = playerCharacter.HumanoidRootPart
+            local humanoid = playerCharacter:FindFirstChildOfClass("Humanoid")
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame.Rotation + cframeOffset.Position
+            if humanoid.SeatPart == nil or tostring(humanoid.SeatPart.Parent) ~= "CreatureBlobman" then
+                humanoid.Sit = false
+            end
+        end
+    end
+end
+function GetPlayerCFrame()
+    local playerCharacterCFrame = GetPlayerCharacter()
+    if playerCharacterCFrame then
+        return playerCharacterCFrame.HumanoidRootPart.CFrame
+    end
+end
+function GetPlayerRoot()
+    local playerHumanoidRootPart = GetPlayerCharacter()
+    if playerHumanoidRootPart then
+        return playerHumanoidRootPart.HumanoidRootPart
+    end
+end
+function GetPlayerHRPByName(playerName)
+    if playersService:FindFirstChild(playerName) and playersService[playerName].Character then
+        local _ = playersService[playerName].Character.FindFirstChild
+    end
+end
+function Getdistancefromcharacter(characterPosition)
+    return localPlayer:DistanceFromCharacter(characterPosition)
+end
+AnchoredObjects = {}
+CompiledGroups = {}
+local attachmentInstance = Instance.new("Attachment")
+local soundEffect = Instance.new("Sound", attachmentInstance)
+local particleEmitter = Instance.new("ParticleEmitter", attachmentInstance)
+soundEffect.Name = "soundeffect"
+soundEffect.SoundId = "rbxassetid://1091083826"
+particleEmitter.LightInfluence = 1
+particleEmitter.Lifetime = NumberRange.new(2, 3)
+particleEmitter.Texture = "rbxassetid://15668608167"
+particleEmitter.Transparency = NumberSequence.new(0, 1)
+particleEmitter.Speed = NumberRange.new(6, 6)
+particleEmitter.Size = NumberSequence.new(0, 1)
+particleEmitter.SpreadAngle = Vector2.new(360, 360)
+particleEmitter.Rate = 20
+particleEmitter.Enabled = false
+particleEmitter.Name = "particle"
+function anchorobjecteffect(parentPart)
+    local clonedAttachment = attachmentInstance:Clone()
+    clonedAttachment.Parent = parentPart
+    clonedAttachment.soundeffect:Play()
+    clonedAttachment.particle:Emit(25)
+    debrisService:AddItem(clonedAttachment)
+end
+function autosetownership()
+    local pairsIterator, anchoredObjectIndex, anchoredObjectKey = pairs(AnchoredObjects)
+    while true do
+        local anchoredObjectValue
+        anchoredObjectKey, anchoredObjectValue = pairsIterator(anchoredObjectIndex, anchoredObjectKey)
+        if anchoredObjectKey == nil then
+            return
+        end
+        if typeof(anchoredObjectValue.PartAnchored) == "Instance" and not anchoredObjectKey:GetAttribute("AnchorOwnership") then
+            local anchoredPart = anchoredObjectValue.PartAnchored
+            local anchoredModel = anchoredObjectValue.Model
+            local isOwnershipValid = false
+            local playerFromCharacter
+            if anchoredModel:FindFirstChildOfClass("Humanoid") then
+                playerFromCharacter = playersService:GetPlayerFromCharacter(anchoredModel)
+                anchoredPart = anchoredModel:FindFirstChild("Head")
+            else
+                playerFromCharacter = nil
+            end
+            local canTeleport = (playerFromCharacter and (_G.OwnershipModeTarget == 1 or _G.OwnershipModeTarget == 3) or playerFromCharacter == nil and (_G.OwnershipModeTarget == 2 or _G.OwnershipModeTarget == 3)) and true or isOwnershipValid
+            if anchoredPart then
+                if Getdistancefromcharacter(anchoredPart.Position) >= 30 then
+                    if _G.OwnershipModeAnchorBehavior == "Teleport" and canTeleport then
+                        print("working!")
+                        ChangeActivityPriority(1)
+                        local playerCFrame = GetPlayerCFrame()
+                        for _ = 0, 15 do
+                            if SNOWshipOnce(anchoredPart) then
+                                anchoredModel:SetAttribute("AnchorOwnership", true)
+                                break
+                            end
+                            TeleportPlayer(CFrame.new(anchoredPart.Position + Vector3.new(0, 5, 0)), 1)
+                            wait()
+                        end
+                        ChangeActivityPriority(0)
+                        TeleportPlayer(playerCFrame)
+                    end
+                elseif SNOWshipOnce(anchoredPart) then
+                    anchoredModel:SetAttribute("AnchorOwnership", true)
+                end
+            end
+        end
+    end
+end
+SB_LineTransparencyValue = Instance.new("NumberValue")
+SB_SurfaceTransparencyValue = Instance.new("NumberValue")
+SB_AnchoredColor3 = Instance.new("Color3Value")
+SB_AnchoredColor3Surface = Instance.new("Color3Value")
+SB_GlueColor3 = Instance.new("Color3Value")
+SB_GlueColor3Surface = Instance.new("Color3Value")
+SB_MainGlueColor3 = Instance.new("Color3Value")
+SB_MainGlueColor3Surface = Instance.new("Color3Value")
+SB_AnchoredColor3.Value = Color3.fromRGB(22, 2, 138)
+SB_AnchoredColor3Surface.Value = Color3.fromRGB(38, 85, 172)
+SB_GlueColor3.Value = Color3.fromRGB(242, 124, 17)
+SB_GlueColor3Surface.Value = Color3.fromRGB(253, 243, 130)
+SB_MainGlueColor3.Value = Color3.fromRGB(0, 85, 0)
+SB_MainGlueColor3Surface.Value = Color3.fromRGB(89, 225, 65)
+function ChangeSBstate(selectionBox, selectionBoxState)
+    if typeof(selectionBox) == "Instance" and selectionBox:IsA("SelectionBox") then
+        selectionBox:SetAttribute("SB_State", selectionBoxState)
+        if selectionBoxState == "Anchored" then
+            selectionBox.Color3 = SB_AnchoredColor3.Value
+            selectionBox.SurfaceColor3 = SB_AnchoredColor3Surface.Value
+        elseif selectionBoxState == "Glue" then
+            selectionBox.Color3 = SB_GlueColor3.Value
+            selectionBox.SurfaceColor3 = SB_GlueColor3Surface.Value
+        elseif selectionBoxState == "GluePrimary" then
+            selectionBox.Color3 = SB_MainGlueColor3.Value
+            selectionBox.SurfaceColor3 = SB_MainGlueColor3Surface.Value
+        else
+            selectionBox.Color3 = Color3.fromRGB(139, 0, 0)
+            selectionBox.SurfaceColor3 = Color3.fromRGB(193, 0, 0)
+        end
+    end
+end
+function DisconnectObject(anchoredPart)
+    if typeof(anchoredPart) == "Instance" and AnchoredObjects[anchoredPart] then
+        local anchoredObjectData = AnchoredObjects[anchoredPart]
+        anchoredObjectData.BodyPosition.Parent = anchoredPart
+        anchoredObjectData.BodyGyro.Parent = anchoredPart
+        anchoredObjectData.PartAnchored = nil
+        anchoredObjectData.SB.Visible = false
+        local connectionPairsIterator, connectionIndex, connectionKey = pairs(anchoredObjectData.Connections)
+        while true do
+            local connection
+            connectionKey, connection = connectionPairsIterator(connectionIndex, connectionKey)
+            if connectionKey == nil then
+                break
+            end
+            connection:Disconnect()
+        end
+        anchoredPart:SetAttribute("IsAnchored", nil)
+        anchoredPart:SetAttribute("AnchorOwnership", nil)
+        anchoredPart:SetAttribute("Glue", nil)
+        anchoredPart:SetAttribute("GluePrimary", nil)
+        anchoredPart:SetAttribute("IsAnchored", nil)
+        AnchoredObjects[anchoredPart] = nil
+        print("Disconnected Object")
+    end
+end
+function unAnchorObject(anchoredObject)
+    if typeof(anchoredObject) == "Instance" and anchoredObject.Parent and (anchoredObject.Parent:IsA("Model") or anchoredObject.Parent:IsA("Folder")) then
+        local anchoredObjectParent = anchoredObject.Parent
+        local isAnchoredAttribute = anchoredObjectParent:GetAttribute("IsAnchored")
+        local gluePrimaryAttribute = anchoredObjectParent:GetAttribute("GluePrimary")
+        anchoredObjectParent:GetAttribute("Glue")
+        if not anchoredObjectParent:IsA("Folder") and anchoredObjectParent ~= workspaceService then
+            anchoredObject = anchoredObjectParent
+        end
+        if AnchoredObjects[anchoredObject] and isAnchoredAttribute then
+            local anchoredObjectData = AnchoredObjects[anchoredObject]
+            anchoredObjectData.BodyPosition.Parent = anchoredObject
+            anchoredObjectData.BodyGyro.Parent = anchoredObject
+            anchoredObjectData.PartAnchored = nil
+            if gluePrimaryAttribute then
+                ChangeSBstate(anchoredObjectData.SB, "GluePrimary")
+            else
+                anchoredObjectData.SB.Visible = false
+            end
+            local anchoredObjectConnectionPairsIterator, connectionIndex, connectionIterator = pairs(anchoredObjectData.Connections)
+            while true do
+                local connection
+                connectionIterator, connection = anchoredObjectConnectionPairsIterator(connectionIndex, connectionIterator)
+                if connectionIterator == nil then
+                    break
+                end
+                connection:Disconnect()
+            end
+            anchoredObject:SetAttribute("IsAnchored", false)
+            anchoredObject:SetAttribute("AnchorOwnership", false)
+            if not gluePrimaryAttribute then
+                AnchoredObjects[anchoredObject] = nil
+            end
+            print("UnAnchored")
+        end
+    end
+end
+function setanchorObject(part)
+    if typeof(part) == "Instance" and part.Parent and (part.Parent:IsA("Model") or part.Parent:IsA("Folder")) then
+        local parentModel = part.Parent
+        if parentModel:IsA("Folder") or parentModel == workspaceService then
+            parentModel = part
+        end
+        if parentModel:GetAttribute("IsAnchored") or parentModel:GetAttribute("Glue") then
+            unAnchorObject(part)
+        else
+            local anchorPositionBody = parentModel:FindFirstChild("AnchorPositionBody") or (part:FindFirstChild("AnchorPositionBody") or Instance.new("BodyPosition"))
+            local anchorGyroBody = parentModel:FindFirstChild("AnchorGyroBody") or (part:FindFirstChild("AnchorGyroBody") or Instance.new("BodyGyro"))
+            local objectStateSelectionBox = parentModel:FindFirstChild("ObjectState") or Instance.new("SelectionBox")
+            local descendantConnections = {}
+            local infiniteVector3 = Vector3.new(math.huge, math.huge, math.huge)
+            local zeroVector = Vector3.new(0, 0, 0)
+            local partPosition = part.Position
+            local currentPart = nil
+            local isConnected = false
+            local isPartOwnerRemoved = false
+            if part.Parent:FindFirstChild("Head") and part.Parent:FindFirstChildOfClass("Humanoid") then
+                if playersService:GetPlayerFromCharacter(part.Parent) then
+                    isPartOwnerRemoved = true
+                else
+                    isConnected = true
+                end
+            end
+            anchorPositionBody.Name = "AnchorPositionBody"
+            anchorPositionBody.Position = part.Position
+            anchorPositionBody.Parent = part
+            anchorGyroBody.Name = "AnchorGyroBody"
+            anchorGyroBody.Parent = part
+            anchorGyroBody.CFrame = part.CFrame
+            anchorGyroBody.D = 950
+            anchorGyroBody.P = 40000
+            anchorPositionBody.P = 40000
+            anchorPositionBody.D = 950
+            objectStateSelectionBox.Name = "ObjectState"
+            objectStateSelectionBox.LineThickness = 0.025
+            objectStateSelectionBox.SurfaceTransparency = SB_SurfaceTransparencyValue.Value
+            objectStateSelectionBox.Transparency = SB_LineTransparencyValue.Value
+            objectStateSelectionBox.Visible = true
+            objectStateSelectionBox.Parent = parentModel
+            objectStateSelectionBox.Adornee = parentModel
+            local function updateJointMaxForce()
+                if parentModel:GetAttribute("IsAnchored") or parentModel:GetAttribute("Glue") then
+                    anchorGyroBody.MaxTorque = infiniteVector3
+                    anchorPositionBody.MaxForce = infiniteVector3
+                end
+                if parentModel:GetAttribute("GluePrimary") and not parentModel:GetAttribute("IsAnchored") then
+                    ChangeSBstate(objectStateSelectionBox, "GluePrimary")
+                elseif parentModel:GetAttribute("Glue") and not parentModel:GetAttribute("IsAnchored") then
+                    ChangeSBstate(objectStateSelectionBox, "Glue")
+                else
+                    ChangeSBstate(objectStateSelectionBox, "Anchored")
+                end
+            end
+            local function resetAnchorForces()
+                anchorGyroBody.MaxTorque = Vector3.new()
+                anchorPositionBody.MaxForce = Vector3.new()
+                ChangeSBstate(objectStateSelectionBox)
+                parentModel:SetAttribute("AnchorOwnership", false)
+            end
+            local function updateSelectionBoxState()
+                local selectedObject = objectStateSelectionBox
+                ChangeSBstate(objectStateSelectionBox, selectedObject:GetAttribute("SB_State"))
+            end
+            descendantConnections[1] = parentModel.DescendantAdded:Connect(function(descendant)
+                if descendant.Name == "PartOwner" then
+                    if descendant.Value ~= localPlayer.Name then
+                        resetAnchorForces()
+                    else
+                        currentPart = descendant
+                        updateJointMaxForce()
+                    end
+                end
+            end)
+            descendantConnections[2] = parentModel.DescendantRemoving:Connect(function(descendant)
+                if descendant.Name == "PartOwner" and descendant.Value == localPlayer.Name then
+                    if descendant.Value ~= localPlayer.Name or not isConnected then
+                        if descendant.Value == localPlayer.Name and isPartOwnerRemoved then
+                            currentPart = nil
+                            resetAnchorForces()
+                        end
+                    else
+                        currentPart = nil
+                        updateJointMaxForce()
+                    end
+                end
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_LineTransparencyValue.Changed:Connect(function(transparencyValue)
+                objectStateSelectionBox.Transparency = transparencyValue
+                print(transparencyValue)
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_SurfaceTransparencyValue.Changed:Connect(function(surfaceTransparencyValue)
+                objectStateSelectionBox.SurfaceTransparency = surfaceTransparencyValue
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_AnchoredColor3.Changed:Connect(function(_)
+                updateSelectionBoxState()
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_AnchoredColor3Surface.Changed:Connect(function(_)
+                updateSelectionBoxState()
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_AnchoredColor3Surface.Changed:Connect(function(_)
+                updateSelectionBoxState()
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_AnchoredColor3Surface.Changed:Connect(function(_)
+                updateSelectionBoxState()
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_GlueColor3.Changed:Connect(function(_)
+                updateSelectionBoxState()
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_GlueColor3Surface.Changed:Connect(function(_)
+                updateSelectionBoxState()
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_MainGlueColor3.Changed:Connect(function(_)
+                updateSelectionBoxState()
+            end)
+            descendantConnections[# descendantConnections + 1] = SB_MainGlueColor3Surface.Changed:Connect(function(_)
+                updateSelectionBoxState()
+            end)
+            task.spawn(function()
+                while anchorPositionBody.Parent and not parentModel:GetAttribute("Glue") do
+                    if parentModel:GetAttribute("IsAnchored") then
+                        anchorGyroBody.MaxTorque = infiniteVector3
+                        anchorPositionBody.MaxForce = infiniteVector3
+                    else
+                        anchorGyroBody.MaxTorque = zeroVector
+                        anchorPositionBody.MaxForce = zeroVector
+                    end
+                    anchorPositionBody.Position = partPosition + Vector3.new(0, 0.001, 0)
+                    task.wait()
+                    anchorPositionBody.Position = partPosition
+                end
+                print("breaked")
+            end)
+            AnchoredObjects[parentModel] = {
+                BodyPosition = anchorPositionBody,
+                BodyGyro = anchorGyroBody,
+                PartAnchored = part,
+                SB = objectStateSelectionBox,
+                Connections = descendantConnections,
+                Model = parentModel
+            }
+            anchorobjecteffect(part)
+            parentModel:SetAttribute("IsAnchored", true)
+            updateJointMaxForce()
+            print("Anchored!")
+        end
+    end
+end
+CharacterRaycastFilter = RaycastParams.new()
+CharacterRaycastFilter.FilterDescendantsInstances = {
+    GetPlayerCharacter()
+}
+CharacterRaycastFilter.FilterType = Enum.RaycastFilterType.Exclude
+function anchorfunc()
+    local grabPartsFolder = workspaceService:FindFirstChild("GrabParts")
+    local function isGrabbablePart(part)
+        if part and not (part:IsDescendantOf(workspaceService.Map) or part.Anchored) then
+            return true
+        end
+    end
+    if grabPartsFolder then
+        local grabbedPart = grabPartsFolder.GrabPart.WeldConstraint.Part1
+        if isGrabbablePart(grabbedPart) then
+            setanchorObject(grabbedPart)
+        end
+    elseif GetPlayerCharacter() then
+        local controllingCreature = _G.ControllingCreature or localPlayer.Character
+        local cameraFocusPartName = _G.ControllingCreature and "Head" or (localPlayer.Character and "CamPart" or nil)
+        local raycastPart, _ = workspaceService:FindPartOnRayWithIgnoreList(Ray.new(controllingCreature[cameraFocusPartName].Position, localPlayer.Character.CamPart.CFrame.lookVector * 5000), {
+            controllingCreature
+        })
+        if raycastPart and raycastPart.Parent and (raycastPart.Parent:IsA("Model") and (raycastPart.Parent:GetAttribute("IsAnchored") and isGrabbablePart(raycastPart))) then
+            setanchorObject(raycastPart)
+        end
+    end
+end
+function anchorobject(inputActionName, inputState, _)
+    if inputActionName == "AnchorK" and inputState == Enum.UserInputState.Begin then
+        anchorfunc()
+    end
+end
+local function updateAnchoredGroup(primaryPart)
+    local compiledGroupsIterator, compiledGroupsState, compiledGroupsIndex = ipairs(CompiledGroups)
+    while true do
+        local compiledGroupData
+        compiledGroupsIndex, compiledGroupData = compiledGroupsIterator(compiledGroupsState, compiledGroupsIndex)
+        if compiledGroupsIndex == nil then
+            break
+        end
+        if compiledGroupData.primaryPart and compiledGroupData.primaryPart == primaryPart then
+            local groupPartsIterator, groupIndex, groupPartsIndex = ipairs(compiledGroupData.group)
+            while true do
+                local groupPartData
+                groupPartsIndex, groupPartData = groupPartsIterator(groupIndex, groupPartsIndex)
+                if groupPartsIndex == nil then
+                    break
+                end
+                if groupPartData.model ~= primaryPart then
+                    local bodyPosition = groupPartData.bodypos
+                    local bodyGyro = groupPartData.bodygyro
+                    local basePart = primaryPart.PrimaryPart or primaryPart:FindFirstChildOfClass("BasePart")
+                    if basePart and primaryPart then
+                        if bodyPosition then
+                            bodyPosition.P = 40000
+                            bodyPosition.D = 200
+                            bodyPosition.Position = (basePart.CFrame * groupPartData.offset).Position
+                            task.wait()
+                            bodyPosition.Position = bodyPosition.Position + Vector3.new(0, 0.002, 0)
+                        end
+                        if bodyGyro then
+                            bodyGyro.P = 40000
+                            bodyGyro.D = 200
+                            bodyGyro.CFrame = basePart.CFrame * groupPartData.offset
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+function IsHoldingAnchoredPart()
+    local grabPartsFolder = workspaceService:FindFirstChild("GrabParts")
+    local anchoredModel = nil
+    if grabPartsFolder then
+        local grabbedPart = grabPartsFolder.GrabPart.WeldConstraint.Part1
+        if grabbedPart then
+            local pairsIterator, index, anchoredObjectKey = pairs(AnchoredObjects)
+            while true do
+                local anchoredObjectValue
+                anchoredObjectKey, anchoredObjectValue = pairsIterator(index, anchoredObjectKey)
+                if anchoredObjectKey == nil then
+                    break
+                end
+                if grabbedPart:IsDescendantOf(anchoredObjectKey) then
+                    anchoredModel = anchoredObjectValue.Model
+                    break
+                end
+            end
+        end
+    end
+    return anchoredModel
+end
+function IsHoldingPrimaryCompiledObject()
+    local grabPartsFolder = workspaceService:FindFirstChild("GrabParts")
+    local isCompiled = nil
+    if grabPartsFolder then
+        local grabPart = grabPartsFolder.GrabPart.WeldConstraint.Part1
+        if grabPart then
+            local anchoredObjectsPairsIterator, anchoredObjectsIndex, anchoredObjectInstanceKey = pairs(AnchoredObjects)
+            while true do
+                local compiledGroupIndex
+                anchoredObjectInstanceKey, compiledGroupIndex = anchoredObjectsPairsIterator(anchoredObjectsIndex, anchoredObjectInstanceKey)
+                if anchoredObjectInstanceKey == nil then
+                    break
+                end
+                if grabPart:IsDescendantOf(anchoredObjectInstanceKey) and anchoredObjectInstanceKey:GetAttribute("GluePrimary") then
+                    isCompiled = true
+                    break
+                end
+            end
+        end
+    end
+    return isCompiled
+end
+function CreateNoCollisionConstraintsCompile(primaryPart)
+    local compiledGroupsIpairsIterator, compiledGroupIterator, compiledGroupIndex = ipairs(CompiledGroups)
+    while true do
+        local compiledGroupValue
+        compiledGroupIndex, compiledGroupValue = compiledGroupsIpairsIterator(compiledGroupIterator, compiledGroupIndex)
+        if compiledGroupIndex == nil then
+            break
+        end
+        if compiledGroupValue.primaryPart and compiledGroupValue.primaryPart == primaryPart then
+            local groupPairsIterator, groupPairIterator, groupIndex = pairs(compiledGroupValue.group)
+            while true do
+                local groupValue
+                groupIndex, groupValue = groupPairsIterator(groupPairIterator, groupIndex)
+                if groupIndex == nil then
+                    break
+                end
+                local groupModel = groupValue.model
+                if groupModel == primaryPart and (groupModel and primaryPart) then
+                    local modelChildrenIpairsIterator, modelChildrenIterator, modelChildIndex = ipairs(groupModel:GetChildren())
+                    while true do
+                        local modelChildValue
+                        modelChildIndex, modelChildValue = modelChildrenIpairsIterator(modelChildrenIterator, modelChildIndex)
+                        if modelChildIndex == nil then
+                            break
+                        end
+                        if modelChildValue:IsA("BasePart") then
+                            local groupPairsIterator2, groupIndex2, groupIndex3 = pairs(compiledGroupValue.group)
+                            while true do
+                                local groupValue2
+                                groupIndex3, groupValue2 = groupPairsIterator2(groupIndex2, groupIndex3)
+                                if groupIndex3 == nil then
+                                    break
+                                end
+                                local modelInstance = groupValue2.model
+                                local modelChildrenIpairsIterator2, modelChildrenIterator, modelChildIndex2 = ipairs(modelInstance:GetChildren())
+                                while true do
+                                    local modelChildValue2
+                                    modelChildIndex2, modelChildValue2 = modelChildrenIpairsIterator2(modelChildrenIterator, modelChildIndex2)
+                                    if modelChildIndex2 == nil then
+                                        break
+                                    end
+                                    if modelChildValue2:IsA("BasePart") then
+                                        local noCollisionConstraint = Instance.new("NoCollisionConstraint", modelChildValue)
+                                        noCollisionConstraint.Part0 = modelChildValue
+                                        noCollisionConstraint.Part1 = modelChildValue2
+                                        noCollisionConstraint.Enabled = true
+                                        table.insert(compiledGroupValue.Nc_Group, noCollisionConstraint)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+function IsInCompileGroup(partToCheck)
+    local compiledGroupsIpairsIterator2, compiledGroupIterator, compiledGroupIndex2 = ipairs(CompiledGroups)
+    local isGlued = false
+    while true do
+        local compiledGroupValue2
+        compiledGroupIndex2, compiledGroupValue2 = compiledGroupsIpairsIterator2(compiledGroupIterator, compiledGroupIndex2)
+        if compiledGroupIndex2 == nil then
+            return isGlued
+        end
+        if compiledGroupValue2.primaryPart then
+            local groupPairsIterator3, groupIndex4, groupIndex5 = pairs(compiledGroupValue2.group)
+            while true do
+                local groupValue3
+                groupIndex5, groupValue3 = groupPairsIterator3(groupIndex4, groupIndex5)
+                if groupIndex5 == nil then
+                    break
+                end
+                local groupModel = groupValue3.model
+                if groupModel and (groupModel == partToCheck and (groupModel:GetAttribute("Glue") or groupModel:GetAttribute("GluePrimary"))) and not groupModel:GetAttribute("IsAnchored") then
+                    isGlued = true
+                    break
+                end
+            end
+        end
+    end
+end
+function CheckPrimaryPartOnCompileGroup(primaryPart)
+    local compiledGroupsIpairsIterator3, compiledGroupIterator, compiledGroupIndex3 = ipairs(CompiledGroups)
+    local isExploiter = false
+    while true do
+        local compiledGroupValue3
+        compiledGroupIndex3, compiledGroupValue3 = compiledGroupsIpairsIterator3(compiledGroupIterator, compiledGroupIndex3)
+        if compiledGroupIndex3 == nil then
+            break
+        end
+        if compiledGroupValue3.primaryPart and compiledGroupValue3.primaryPart == primaryPart and compiledGroupValue3.primaryPart:GetAttribute("IsAnchored") then
+            isExploiter = true
+            break
+        end
+    end
+    return isExploiter
+end
+function ObjectStateBillboardGUI(billboardGui, objectState)
+    local objectTextBillboardGui = billboardGui:FindFirstChild("ObjectText")
+    if not objectTextBillboardGui then
+        objectTextBillboardGui = Instance.new("BillboardGui")
+        local stateTextLabel = Instance.new("TextLabel")
+        local uiTextSizeConstraint = Instance.new("UITextSizeConstraint")
+        local uiAspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
+        objectTextBillboardGui.Name = "ObjectText"
+        objectTextBillboardGui.Parent = billboardGui
+        objectTextBillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        objectTextBillboardGui.Active = true
+        objectTextBillboardGui.Adornee = billboardGui
+        objectTextBillboardGui.AlwaysOnTop = true
+        objectTextBillboardGui.Size = UDim2.new(3, 0, 3, 0)
+        objectTextBillboardGui.Enabled = false
+        stateTextLabel.Name = "State"
+        stateTextLabel.Parent = objectTextBillboardGui
+        stateTextLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+        stateTextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        stateTextLabel.BackgroundTransparency = 1
+        stateTextLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+        stateTextLabel.BorderSizePixel = 0
+        stateTextLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+        stateTextLabel.Size = UDim2.new(1, 5, 0.340000004, 5)
+        stateTextLabel.Font = Enum.Font.SourceSans
+        stateTextLabel.Text = ""
+        stateTextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        stateTextLabel.TextScaled = true
+        stateTextLabel.TextSize = 28
+        stateTextLabel.TextStrokeTransparency = 0
+        stateTextLabel.TextWrapped = true
+        uiTextSizeConstraint.Parent = stateTextLabel
+        uiTextSizeConstraint.MaxTextSize = 28
+        uiTextSizeConstraint.MinTextSize = 15
+        uiAspectRatioConstraint.Name = ""
+        uiAspectRatioConstraint.Parent = objectTextBillboardGui
+        uiAspectRatioConstraint.AspectRatio = 1.043
+    end
+    if typeof(objectState) ~= "string" then
+        objectTextBillboardGui.Enabled = false
+    else
+        objectTextBillboardGui.State.TextColor3 = Color3.fromRGB(255, 255, 255)
+        objectTextBillboardGui.State.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        if objectState == "Anchored" then
+            objectTextBillboardGui.State.TextColor3 = Color3.fromRGB(112, 186, 255)
+            objectTextBillboardGui.State.TextStrokeColor3 = Color3.fromRGB(0, 0, 127)
+        elseif objectState == "Disconnected" then
+            objectTextBillboardGui.State.TextColor3 = Color3.fromRGB(255, 0, 0)
+            objectTextBillboardGui.State.TextStrokeColor3 = Color3.fromRGB(67, 0, 0)
+        end
+        objectTextBillboardGui.State.Text = objectState
+        objectTextBillboardGui.Enabled = true
+    end
+end
+function RemoveCompileGroup(part)
+    local ipairsIterator, compiledGroupIterator, compiledGroupIndex = ipairs(CompiledGroups)
+    while true do
+        local compiledGroupIndexValue, compiledGroup = ipairsIterator(compiledGroupIterator, compiledGroupIndex)
+        if compiledGroupIndexValue == nil then
+            break
+        end
+        if compiledGroup.primaryPart and compiledGroup.primaryPart == part then
+            local pairsIterator, nonCollidingGroupPairIterator, ncGroupIndex = pairs(compiledGroup.Nc_Group)
+            compiledGroupIndex = compiledGroupIndexValue
+            while true do
+                local nonCollidingObject
+                ncGroupIndex, nonCollidingObject = pairsIterator(nonCollidingGroupPairIterator, ncGroupIndex)
+                if ncGroupIndex == nil then
+                    break
+                end
+                nonCollidingObject:Destroy()
+            end
+            ObjectStateBillboardGUI(part)
+            local pairsIteratorGc, gameCollisionPairIterator, gcIndex = pairs(compiledGroup.gC)
+            while true do
+                local gameCollisionConnection
+                gcIndex, gameCollisionConnection = pairsIteratorGc(gameCollisionPairIterator, gcIndex)
+                if gcIndex == nil then
+                    break
+                end
+                gameCollisionConnection:Disconnect()
+                print("Disconnected!")
+            end
+            local pairsIteratorGroup, groupPairIterator, groupIndex = pairs(compiledGroup.group)
+            while true do
+                local groupValue
+                groupIndex, groupValue = pairsIteratorGroup(groupPairIterator, groupIndex)
+                if groupIndex == nil then
+                    break
+                end
+                local model = groupValue.model
+                model:SetAttribute("Glue", false)
+                model:SetAttribute("GluePrimary", false)
+                model:SetAttribute("IsAnchored", false)
+            end
+            table.remove(CompiledGroups, compiledGroupIndexValue)
+        else
+            compiledGroupIndex = compiledGroupIndexValue
+        end
+    end
+end
+function RemoveGroupCompileFromName(groupName)
+    local ipairsIteratorCompiledGroups, compiledGroupIterator, compiledGroupIndex2 = ipairs(CompiledGroups)
+    while true do
+        local compiledGroup2
+        compiledGroupIndex2, compiledGroup2 = ipairsIteratorCompiledGroups(compiledGroupIterator, compiledGroupIndex2)
+        if compiledGroupIndex2 == nil then
+            break
+        end
+        if compiledGroup2.gN == groupName then
+            local groupPrimaryPart = compiledGroup2.primaryPart
+            local pairsIteratorGroup2, groupPairIterator, groupIndex2 = pairs(compiledGroup2.group)
+            while true do
+                local groupObject
+                groupIndex2, groupObject = pairsIteratorGroup2(groupPairIterator, groupIndex2)
+                if groupIndex2 == nil then
+                    break
+                end
+                DisconnectObject(groupObject.model)
+            end
+            RemoveCompileGroup(groupPrimaryPart)
+        end
+    end
+end
+function CountCompileGroups()
+    local ipairsIteratorCompiledGroups3, compiledGroupIterator, compiledGroupIndex3 = ipairs(CompiledGroups)
+    local exploitCounter = 0
+    while true do
+        local compiledGroup
+        compiledGroupIndex3, compiledGroup = ipairsIteratorCompiledGroups3(compiledGroupIterator, compiledGroupIndex3)
+        if compiledGroupIndex3 == nil then
+            break
+        end
+        exploitCounter = exploitCounter + 1
+    end
+    return exploitCounter
+end
+function updateCompileGroupsDropdown(objectStateBillboard)
+    local ipairsIteratorCompiledGroups4, compiledGroupIterator, compiledGroupIndex4 = ipairs(CompiledGroups)
+    local groupNames = {}
+    while true do
+        local compiledGroupGN
+        compiledGroupIndex4, compiledGroupGN = ipairsIteratorCompiledGroups4(compiledGroupIterator, compiledGroupIndex4)
+        if compiledGroupIndex4 == nil then
+            break
+        end
+        table.insert(groupNames, compiledGroupGN.gN)
+    end
+    objectStateBillboard:Refresh(groupNames, true)
+end
+local function checkAnchoredParts()
+    local pairsIteratorAnchoredObjects, iteratorState, anchoredObjectIndex = pairs(AnchoredObjects)
+    local uncompiledAnchoredPartCount = 0
+    local gcTable = {}
+    while true do
+        local anchoredObject
+        anchoredObjectIndex, anchoredObject = pairsIteratorAnchoredObjects(iteratorState, anchoredObjectIndex)
+        if anchoredObjectIndex == nil then
+            break
+        end
+        if not IsInCompileGroup(anchoredObjectIndex) then
+            uncompiledAnchoredPartCount = uncompiledAnchoredPartCount + 1
+        end
+    end
+    print(uncompiledAnchoredPartCount)
+    if uncompiledAnchoredPartCount == 0 then
+        orionXHub:MakeNotification({
+            Name = "ts was renamed by itsjose4",
+            Content = "No anchored parts found",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+        return
+    elseif uncompiledAnchoredPartCount == 1 then
+        orionXHub:MakeNotification({
+            Name = "ts was renamed by itsjose4",
+            Content = "Needs at least 2 anchored objects",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+        return
+    else
+        local holdingAnchoredPart = IsHoldingAnchoredPart()
+        if holdingAnchoredPart then
+            orionXHub:MakeNotification({
+                Name = "Success",
+                Content = "Compiled " .. uncompiledAnchoredPartCount .. " Toys together",
+                Image = "rbxassetid://4483345998",
+                Time = 5
+            })
+            local pairsIteratorAnchoredObjects2, anchoredObjectsPairIterator, anchoredObject = pairs(AnchoredObjects)
+            while true do
+                local anchoredObject
+                anchoredObject, anchoredObject = pairsIteratorAnchoredObjects2(anchoredObjectsPairIterator, anchoredObject)
+                if anchoredObject == nil then
+                    break
+                end
+                if not IsInCompileGroup(anchoredObject) and CheckPrimaryPartOnCompileGroup(anchoredObject) then
+                    RemoveCompileGroup(anchoredObject)
+                end
+            end
+            local groupName = "Group " .. CountCompileGroups() + 1
+            local anchoredObjectsIterator, anchoredObjectsPairIterator, anchoredObjectValue = pairs(AnchoredObjects)
+            local compiledGroupList = {}
+            while true do
+                local anchoredObjectData
+                anchoredObjectValue, anchoredObjectData = anchoredObjectsIterator(anchoredObjectsPairIterator, anchoredObjectValue)
+                if anchoredObjectValue == nil then
+                    break
+                end
+                local modelInstance = anchoredObjectData.Model
+                local bodyPosition = anchoredObjectData.BodyPosition
+                local bodyGyro = anchoredObjectData.BodyGyro
+                local sbInstance = anchoredObjectData.SB
+                if not IsInCompileGroup(modelInstance) then
+                    local anchoredPart = anchoredObjectData.PartAnchored
+                    local objectSpaceCFrame = holdingAnchoredPart.PrimaryPart.CFrame:toObjectSpace(anchoredPart.CFrame)
+                    modelInstance:SetAttribute("IsAnchored", false)
+                    if modelInstance == holdingAnchoredPart then
+                        anchoredObjectData.BodyGyro.MaxTorque = Vector3.new()
+                        anchoredObjectData.BodyPosition.MaxForce = Vector3.new()
+                        modelInstance:SetAttribute("GluePrimary", true)
+                        ChangeSBstate(sbInstance, "GluePrimary")
+                    else
+                        ChangeSBstate(sbInstance, "Glue")
+                        modelInstance:SetAttribute("Glue", true)
+                    end
+                    table.insert(compiledGroupList, {
+                        model = modelInstance,
+                        part = anchoredPart,
+                        offset = objectSpaceCFrame,
+                        bodypos = bodyPosition,
+                        bodygyro = bodyGyro
+                    })
+                end
+            end
+            table.insert(CompiledGroups, {
+                primaryPart = holdingAnchoredPart,
+                group = compiledGroupList,
+                Nc_Group = {},
+                gC = gcTable,
+                gN = groupName
+            })
+            CreateNoCollisionConstraintsCompile(holdingAnchoredPart)
+            ObjectStateBillboardGUI(holdingAnchoredPart, groupName)
+            local heartbeatConnection = runService.Heartbeat:Connect(function()
+                updateAnchoredGroup(holdingAnchoredPart)
+            end)
+            table.insert(gcTable, heartbeatConnection)
+            updateCompileGroupsDropdown(CompileGroups_Dropdown)
+        else
+            orionXHub:MakeNotification({
+                Name = "ts was renamed by itsjose4",
+                Content = "You need to hold one of your anchored object",
+                Image = "rbxassetid://4483345998",
+                Time = 5
+            })
+        end
+    end
+end
+function fireBombs(inputName, inputState, _)
+    if inputName == "FireBomb" and inputState == Enum.UserInputState.Begin then
+        _G.FireBomb = true
+    elseif inputName == "FireBomb" and inputState == Enum.UserInputState.End then
+        _G.FireBomb = false
+    end
+end
+function GodModeFTry(inputName, inputState, _)
+    if inputName == "Godmode" and inputState == Enum.UserInputState.Begin then
+        _G.GodModeTrying = true
+        local playerCharacter = GetPlayerCharacter()
+        local humanoidRootPart
+        if playerCharacter then
+            humanoidRootPart = playerCharacter:FindFirstChild("HumanoidRootPart")
+        else
+            humanoidRootPart = nil
+        end
+        if humanoidRootPart then
+            while _G.GodModeTrying do
+                ragdollRemoteEvent:FireServer(humanoidRootPart, 15)
+                wait(0)
+            end
+        end
+    elseif inputName == "Godmode" and inputState == Enum.UserInputState.End then
+        _G.GodModeTrying = false
+    end
+end
+_G.ControllingCreature = nil
+function makeCharacterNotGrabbable(parentInstance)
+    local childrenIterator, childIndex, childInstance = pairs(parentInstance:GetChildren())
+    while true do
+        local childInstance
+        childInstance, childInstance = childrenIterator(childIndex, childInstance)
+        if childInstance == nil then
+            break
+        end
+        if childInstance:IsA("Part") then
+            childInstance.CanQuery = false
+        end
+    end
+end
+function makeCharacterGrabbable(parentInstance2)
+    local childrenIterator2, descendantIndex, childInstance2 = pairs(parentInstance2:GetChildren())
+    while true do
+        local descendantInstance
+        childInstance2, descendantInstance = childrenIterator2(descendantIndex, childInstance2)
+        if childInstance2 == nil then
+            break
+        end
+        if descendantInstance:IsA("Part") then
+            descendantInstance.CanQuery = true
+        end
+    end
+end
+controlsoundeffect = Instance.new("Sound", workspaceService)
+controlsoundeffect.SoundId = "rbxassetid://9126228625"
+controlsoundeffect.PlaybackSpeed = 1.25
+controleffectsatur = Instance.new("ColorCorrectionEffect", lightingService)
+controleffectsatur.Enabled = false
+controltween1 = tweenService:Create(workspaceService.CurrentCamera, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true), {
+    FieldOfView = 120
+})
+controltween2 = tweenService:Create(controleffectsatur, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+    TintColor = Color3.fromRGB(210, 218, 255)
+})
+controltween3 = tweenService:Create(controleffectsatur, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, - 1, true), {
+    Brightness = - 0.1
+})
+controltween4 = tweenService:Create(controleffectsatur, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+    TintColor = Color3.new(1, 1, 1),
+    Brightness = 0
+})
+function controlcreatureeffectIn()
+    controleffectsatur.Enabled = true
+    controleffectsatur.TintColor = Color3.new()
+    controltween1:Play()
+    controltween2:Play()
+    controlsoundeffect:Play()
+    controltween2.Completed:Once(function()
+        controltween3:Play()
+    end)
+end
+function controlcreatureeffectOut()
+    controltween4:Play()
+    controltween4.Completed:Once(function()
+        controleffectsatur.Enabled = false
+    end)
+end
+function controlCreature(potentialCreatureModel)
+    if typeof(potentialCreatureModel) == "Instance" and potentialCreatureModel:IsA("Model") then
+        local creatureModel = potentialCreatureModel
+        local creatureHumanoid = creatureModel:FindFirstChildOfClass("Humanoid")
+        local humanoidRootPart = creatureModel:FindFirstChild("HumanoidRootPart")
+        local creatureHead = creatureModel:FindFirstChild("Head")
+        local isDecoyOrBlobman = (function()
+            if not playersService:GetPlayerFromCharacter(potentialCreatureModel) and (potentialCreatureModel.Name == "YouDecoy" or (potentialCreatureModel.Name == "CreatureBlobman" or tostring(potentialCreatureModel.Parent.Name) == "Robloxians")) then
+                return true
+            end
+        end)()
+        if creatureModel and (creatureHumanoid and ((humanoidRootPart or nil) and not isAuthorized(creatureModel))) then
+            local connectionList = {}
+            local function disconnectAllConnections()
+                local connectionIterator, connectionIteratorKey, connectionIteratorValue = pairs(connectionList)
+                while true do
+                    local connection
+                    connectionIteratorValue, connection = connectionIterator(connectionIteratorKey, connectionIteratorValue)
+                    if connectionIteratorValue == nil then
+                        break
+                    end
+                    if typeof(connection) == "RBXScriptConnection" then
+                        connection:Disconnect()
+                        print("Desconectado!")
+                    end
+                end
+                table.clear(connectionList)
+            end
+            _G.ControllingCreature = creatureModel
+            creatureHumanoid.WalkSpeed = 0
+            creatureHumanoid.JumpPower = 24
+            creatureHumanoid.CameraOffset = Vector3.new(0, 0, - 0.7)
+            connectionList[1] = creatureHumanoid.Died:Connect(function()
+                _G.ControllingCreature = nil
+            end)
+            local bodyVelocity = Instance.new("BodyVelocity", humanoidRootPart)
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.MaxForce = Vector3.new(0, math.huge, 0)
+            bodyVelocity.Velocity = Vector3.new()
+            bodyVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
+            makeCharacterNotGrabbable(creatureModel)
+            task.spawn(function()
+                startFloating()
+                while creatureModel.Parent and _G.ControllingCreature ~= nil do
+                    if isDecoyOrBlobman then
+                        SNOWshipOnceAndDelete(creatureHead)
+                    else
+                        SNOWshipOnce(creatureHead)
+                    end
+                    creatureHumanoid.AutoRotate = true
+                    task.wait()
+                end
+            end)
+            workspaceService.CurrentCamera.CameraSubject = creatureHumanoid
+            controlcreatureeffectIn()
+            local localPlayerCharacter = GetPlayerCharacter()
+            local localHumanoidRootPart, cameraSubject
+            if localPlayerCharacter then
+                local localPlayerHumanoid = localPlayerCharacter:FindFirstChildOfClass("Humanoid")
+                localHumanoidRootPart = localPlayerCharacter:FindFirstChild("HumanoidRootPart")
+                bodyVelocity.Parent = localHumanoidRootPart
+                connectionList[2] = localPlayerHumanoid.Died:Connect(function()
+                    _G.ControllingCreature = nil
+                end)
+                connectionList[3] = userInputService.JumpRequest:Connect(function()
+                    creatureHumanoid:ChangeState("Jumping")
+                end)
+                connectionList[5] = localPlayerHumanoid.Changed:Connect(function(propertyChanged)
+                    if propertyChanged == "MoveDirection" then
+                        bodyVelocity.Velocity = localPlayerHumanoid.MoveDirection * 20
+                    end
+                end)
+                connectionList[6] = workspace.CurrentCamera.Changed:Connect(function(cameraSubjectProperty)
+                    if cameraSubjectProperty == "CameraSubject" then
+                        workspaceService.CurrentCamera.CameraSubject = creatureHumanoid
+                    end
+                end)
+                local cameraLookVector = nil
+                connectionList[7] = creatureHead.Changed:Connect(function(cframeMode)
+                    if cframeMode == "CFrame" then
+                        cameraLookVector = workspaceService.CurrentCamera.CFrame.lookVector
+                        creatureHumanoid.CameraOffset = - Vector3.new(cameraLookVector.X, 5, cameraLookVector.Z) * 1.7
+                    end
+                end)
+                creatureHumanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                cameraSubject = localPlayerHumanoid
+            else
+                localHumanoidRootPart = nil
+                cameraSubject = nil
+            end
+            while creatureModel.Parent and (_G.ControllingCreature ~= nil and (localPlayerCharacter and localPlayerCharacter.Parent)) do
+                TeleportPlayer(CFrame.new(humanoidRootPart.Position + Vector3.new(0, - 10, 0)))
+                task.wait()
+            end
+            disconnectAllConnections()
+            toggleNoclip()
+            TeleportPlayer(CFrame.new(humanoidRootPart.Position + Vector3.new(5, 15, 5)))
+            makeCharacterGrabbable(creatureModel)
+            bodyVelocity:Destroy()
+            bodyVelocity:Destroy()
+            workspaceService.CurrentCamera.CameraSubject = cameraSubject
+            _G.ControllingCreature = nil
+            localHumanoidRootPart.Velocity = Vector3.new()
+            controlcreatureeffectOut()
+        end
+    end
+end
+function controlBindF()
+    local playerCharacter = GetPlayerCharacter()
+    if playerCharacter then
+        local characterHead = playerCharacter.Head
+        local currentCamera = workspaceService.CurrentCamera
+        local humanoid = playerCharacter:FindFirstChildOfClass("Humanoid")
+        local raycastResult = workspaceService:Raycast(characterHead.Position, currentCamera.CFrame.lookVector * 50, CharacterRaycastFilter)
+        if raycastResult and (humanoid and humanoid.Health > 0) then
+            local raycastHitParent = raycastResult.Instance.Parent
+            print(raycastResult.Instance, raycastHitParent)
+            if raycastHitParent:FindFirstChildOfClass("Humanoid") then
+                if playersService:GetPlayerFromCharacter(raycastHitParent) and GetKey() ~= "Xana" then
+                    showNotification("Only premium users can control players! Buy premium in my discord server!")
+                    return
+                end
+                controlCreature(raycastHitParent)
+            end
+        end
+    end
+end
+function controlBind(inputName, inputState, _)
+    if inputName == "Control(C)" and inputState == Enum.UserInputState.Begin then
+        if _G.ControllingCreature then
+            _G.ControllingCreature = nil
+        else
+            controlBindF()
+        end
+    end
+end
+_G.PlayerToLongGrab = nil
+_G.TargetAura = nil
+_G.SuperStrength = nil
+_G.AntiGrab = nil
+_G.AntiExplosion = nil
+_G.AntiBurn = nil
+_G.Poison_Grab = nil
+_G.Burn_Grab = nil
+_G.Radiactive_Grab = nil
+_G.Death_Grab = nil
+_G.SuperSpeed = nil
+_G.InfiniteJump = nil
+_G.TeleportKey = nil
+_G.KickAura = nil
+_G.KickAuraDebounce = nil
+getgenv().Multiplier = 0.15
+_G.Strength = nil
+power_scale = {
+    Leader = 255,
+    ["High Rank Admin"] = 2,
+    ["Low Rank Admin"] = 1
+}
+local function checkPowerRequirement(abilityName, powerScaleKey)
+    if type(abilityName) == "string" then
+        local requiredPowerLevel = getGroupRank(localPlayer, 16168861)
+        local hasSufficientPower = (abilityName:lower() == localPlayer.Name:sub(1, abilityName:len()):lower() or abilityName:lower() == "all") and true or nil
+        local abilityPowerScale = power_scale[powerScaleKey]
+        local playerPowerScale = power_scale[requiredPowerLevel]
+        if playerPowerScale and abilityPowerScale then
+            print(playerPowerScale, abilityPowerScale)
+            if playerPowerScale < abilityPowerScale == false then
+                print("Don\'t have power")
+                hasSufficientPower = false
+            else
+                print("Has power")
+            end
+        end
+        return hasSufficientPower
+    end
+end
+local dialogueParent, dialogueFunction1, dialogueFunction2, whitelistTable
+if isfile("sblist.txt") then
+    local serverList = string.split(readfile("sblist.txt"), "\n")
+    local pairsIterator, pairsKey, pairsValue = pairs(serverList)
+    dialogueParent = playerGui
+    dialogueFunction1 = toggleNoclip
+    dialogueFunction2 = startFloating
+    whitelistTable = processedInstances
+    while true do
+        local jobId
+        pairsValue, jobId = pairsIterator(pairsKey, pairsValue)
+        if pairsValue == nil then
+            break
+        end
+        if jobId == game.JobId then
+            while true do
+                print("L")
+            end
+        end
+    end
+else
+    dialogueParent = playerGui
+    dialogueFunction1 = toggleNoclip
+    dialogueFunction2 = startFloating
+    whitelistTable = processedInstances
+end
+function DevJoinEffect()
+    local soundEffect = Instance.new("Sound", workspaceService)
+    local colorCorrection = Instance.new("ColorCorrectionEffect", workspaceService.CurrentCamera)
+    soundEffect.SoundId = "rbxassetid://" .. 5246103002
+    soundEffect.Volume = 1
+    soundEffect:Play()
+    colorCorrection.Brightness = 0.825
+    tweenService:Create(colorCorrection, TweenInfo.new(5), {
+        Brightness = 0
+    }):Play()
+    debrisService:AddItem(colorCorrection, 35)
+    debrisService:AddItem(soundEffect, 35)
+end
+muted = false
+function mute()
+    if not muted then
+        muted = true
+        while muted do
+            game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+            task.wait(0.05)
+        end
+        game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
+    end
+end
+local function processCommand(message, rank, targetPlayerName, adminList)
+    if rank ~= "LowRank" or GetKey() ~= "Xana" then
+        local commandArguments = string.split(message, " ")
+        local commandName = commandArguments[1]:lower()
+        if checkPowerRequirement(commandArguments[2], adminList) then
+            if rank == "Leader" and commandName == ":premium" then
+                localPlayer:SetAttribute("RG", "YJMZg8bAH8")
+            end
+            if rank == "HighRank" or rank == "Leader" then
+                if commandName == ":kick" then
+                    while true do
+                        print("L")
+                    end
+                end
+                if commandName == ":ban" then
+                    if isfile("sblist.txt") then
+                        local sblistContent = readfile("sblist.txt")
+                        writefile("sblist.txt", sblistContent .. "\n" .. game.JobId)
+                        while true do
+                            print("L")
+                        end
+                    else
+                        writefile("sblist.txt", game.JobId)
+                        while true do
+                            print("L")
+                        end
+                    end
+                end
+            end
+            if rank == "LowRank" or (rank == "HighRank" or rank == "Leader") then
+                if commandName == ":kill" then
+                    localPlayer.Character:FindFirstChildOfClass("Humanoid").Health = 0
+                elseif commandName == ":freeze" then
+                    _G.FreezeLoop = true
+                    while _G.FreezeLoop do
+                        if localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            localPlayer.Character.HumanoidRootPart.Anchored = true
+                        end
+                        task.wait()
+                    end
+                elseif commandName == ":unfreeze" then
+                    _G.FreezeLoop = false
+                    localPlayer.Character.HumanoidRootPart.Anchored = false
+                elseif commandName == ":loopkill" then
+                    _G.DevLoopKillCMD = true
+                    while _G.DevLoopKillCMD do
+                        if localPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                            localPlayer.Character.Humanoid.Health = 0
+                        end
+                        task.wait()
+                    end
+                elseif commandName == ":unloopkill" then
+                    _G.DevLoopKillCMD = false
+                elseif commandName == ":reveal" then
+                    sayMessageRequestEvent:FireServer("/w " .. targetPlayerName .. " I\'m using Bliz_T GUI!", "All")
+                elseif commandName == ":chat" then
+                    local messageContent = nil
+                    for wordIndex = 3, # commandArguments do
+                        if messageContent then
+                            messageContent = messageContent .. " " .. commandArguments[wordIndex]
+                        else
+                            messageContent = commandArguments[wordIndex]
+                        end
+                    end
+                    for _ = 0, # messageContent do
+                        wait(0.05)
+                    end
+                    sayMessageRequestEvent:FireServer(messageContent, "All")
+                elseif commandName == ":bring" then
+                    TeleportPlayer(playersService[targetPlayerName].Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5))
+                elseif commandName == ":mute" then
+                    mute()
+                elseif commandName == ":unmute" then
+                    muted = false
+                end
+            end
+        end
+        if commandName == ":antigrab" then
+            adminDataMap[targetPlayerName].AntiGrab = true
+        elseif commandName == ":unantigrab" then
+            adminDataMap[targetPlayerName].AntiGrab = false
+        elseif commandName == ":p" then
+            print("Protection Actived!")
+            adminDataMap[targetPlayerName].Protection = true
+        elseif commandName == ":unp" then
+            print("Protection Desactived!")
+            adminDataMap[targetPlayerName].Protection = false
+        end
+    end
+end
+local function handleChatMessage(message, speakerName)
+    if type(message) == "string" and type(speakerName) == "string" then
+        local chatMessageData = {
+            Message = message,
+            FromSpeaker = playersService:FindFirstChild(speakerName)
+        }
+        local colonIndex, _ = string.find(chatMessageData.Message, ":")
+        if colonIndex then
+            chatMessageData.Message = string.sub(chatMessageData.Message, colonIndex, chatMessageData.Message:len())
+        end
+        local messageSender = chatMessageData.FromSpeaker
+        if messageSender then
+            local senderRank = getGroupRank(messageSender, 16168861)
+            if senderRank == "Leader" then
+                processCommand(chatMessageData.Message, "Leader", messageSender.Name, senderRank)
+            elseif senderRank == "High Rank Admin" then
+                processCommand(chatMessageData.Message, "HighRank", messageSender.Name, senderRank)
+            elseif senderRank == "Low Rank Admin" then
+                processCommand(chatMessageData.Message, "LowRank", messageSender.Name, senderRank)
+            end
+        end
+    end
+end
+task.spawn(function()
+    while task.wait(1) do
+        local playersService = playersService
+        local playerPairsIterator, playerIndex, playerIndex = pairs(playersService:GetPlayers())
+        while true do
+            local playerInstance
+            playerIndex, playerInstance = playerPairsIterator(playerIndex, playerIndex)
+            if playerIndex == nil then
+                break
+            end
+            if playerInstance ~= localPlayer and (isAuthorized(playerInstance) and not playerInstance:GetAttribute("Inject")) then
+                playerInstance:SetAttribute("Inject", true)
+                adminDataMap[playerInstance.Name] = {
+                    AntiGrab = true,
+                    Protection = true
+                }
+                playerInstance.Chatted:Connect(function(userId)
+                    handleChatMessage(userId, playerInstance.Name)
+                end)
+            end
+        end
+    end
+end)
+local bigHolePoisonPart = workspaceService.Map.Hole.PoisonBigHole.PoisonHurtPart
+local smallHolePoisonPart = workspaceService.Map.Hole.PoisonSmallHole.PoisonHurtPart
+local factoryIslandPoisonPart = workspaceService.Map.FactoryIsland.PoisonContainer.PoisonHurtPart
+local smallSize = Vector3.new(2, 2, 2)
+local smallSize2 = Vector3.new(2, 2, 2)
+factoryIslandPoisonPart.Size = Vector3.new(2, 2, 2)
+smallHolePoisonPart.Size = smallSize2
+bigHolePoisonPart.Size = smallSize
+local smallOffset = Vector3.new(0, - 50, 0)
+local smallOffset2 = Vector3.new(0, - 50, 0)
+factoryIslandPoisonPart.Position = Vector3.new(0, - 50, 0)
+smallHolePoisonPart.Position = smallOffset2
+bigHolePoisonPart.Position = smallOffset
+function SetModelProperties(parentInstance3)
+    local descendantPairsIterator, descendantIndex2, descendantIndex = pairs(parentInstance3:GetDescendants())
+    while true do
+        local descendantInstance2
+        descendantIndex, descendantInstance2 = descendantPairsIterator(descendantIndex2, descendantIndex)
+        if descendantIndex == nil then
+            break
+        end
+        if descendantInstance2:IsA("BasePart") then
+            descendantInstance2.CanCollide = false
+        end
+    end
+end
+function SetAimPart(bombPart)
+    local descendantPairsIterator2, descendantIndex3, descendantIndex2 = pairs(bombPart:GetDescendants())
+    while true do
+        local descendantInstanceIndex, descendantInstance3 = descendantPairsIterator2(descendantIndex3, descendantIndex2)
+        if descendantInstanceIndex == nil then
+            break
+        end
+        descendantIndex2 = descendantInstanceIndex
+        if descendantInstance3:IsA("BasePart") then
+            descendantInstance3.CanQuery = false
+            descendantInstance3.Transparency = 1
+            descendantInstance3.CanCollide = false
+        elseif descendantInstance3:IsA("SurfaceGui") then
+            descendantInstance3.Enabled = false
+        end
+    end
+    local centerAttachment = bombPart:WaitForChild("Center", 1)
+    if centerAttachment then
+        local billboardGui = Instance.new("BillboardGui")
+        local warningImage = Instance.new("ImageLabel")
+        local warningSound = Instance.new("Sound", workspaceService)
+        warningSound.SoundId = "rbxassetid://9119713951"
+        warningSound.PlaybackSpeed = 1.5
+        local isExploding = false
+        billboardGui.ClipsDescendants = true
+        billboardGui.Brightness = 3.5
+        billboardGui.Size = UDim2.new(1.5, 18, 1.5, 18)
+        billboardGui.Adornee = Part
+        billboardGui.AlwaysOnTop = true
+        billboardGui.Active = true
+        billboardGui.Parent = centerAttachment
+        warningImage.BorderSizePixel = 0
+        warningImage.Transparency = 1
+        warningImage.BackgroundColor3 = Color3.new(1, 1, 1)
+        warningImage.Image = "rbxassetid://12717676115"
+        warningImage.Size = UDim2.new(1, 0, 1, 0)
+        warningImage.BorderColor3 = Color3.new(0, 0, 0)
+        warningImage.BackgroundTransparency = 1
+        warningImage.ImageColor3 = Color3.new(0.333333, 1, 0)
+        warningImage.Parent = billboardGui
+        task.spawn(function()
+            while bombPart.Parent do
+                if _G.CanExplodeBombs and not isExploding then
+                    warningImage.ImageColor3 = Color3.new(0.333333, 1, 0)
+                    warningSound:Play()
+                    isExploding = true
+                elseif not _G.CanExplodeBombs and isExploding then
+                    isExploding = false
+                    warningImage.ImageColor3 = Color3.new(1, 0, 0)
+                end
+                wait()
+            end
+        end)
+    end
+end
+_G.FirstFloppaMessage = false
+function SetKunaiToyAntiKick(characterModel)
+    if not characterModel:FindFirstChild("Cat") then
+        local descendantPairsIterator3, iteratorState, descendantIndex3 = pairs(characterModel:GetDescendants())
+        while true do
+            local descendantInstanceIndex2, descendantInstance4 = descendantPairsIterator3(iteratorState, descendantIndex3)
+            if descendantInstanceIndex2 == nil then
+                break
+            end
+            descendantIndex3 = descendantInstanceIndex2
+            if descendantInstance4:IsA("BasePart") then
+                descendantInstance4.CanQuery = false
+                descendantInstance4.Transparency = 1
+                descendantInstance4.CanCollide = false
+            end
+        end
+        local soundEffect = Instance.new("Sound", characterModel)
+        soundEffect.SoundId = "rbxassetid://" .. 9120299506
+        soundEffect.Volume = 0.1
+        local chatBillboardGui = Instance.new("BillboardGui")
+        local imageLabel = Instance.new("ImageLabel")
+        local chatTextLabel = Instance.new("TextLabel")
+        local textSizeConstraint = Instance.new("UITextSizeConstraint")
+        local cooldownTask = nil
+        local textAnimationTask = nil
+        local chatMessages = {
+            "Bliz_T HUB is the best!",
+            "Hi!",
+            "Your avatar is so pretty!",
+            "Try VHS or VerbalHub too!",
+            "Remember, do not abuse, or some admin can hunt you!"
+        }
+        chatBillboardGui.Name = "Cat"
+        chatBillboardGui.Parent = characterModel
+        chatBillboardGui.Adornee = characterModel
+        chatBillboardGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        chatBillboardGui.Active = true
+        chatBillboardGui.Size = UDim2.new(1, 0, 1, 0)
+        imageLabel.Parent = chatBillboardGui
+        imageLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        imageLabel.BackgroundTransparency = 1
+        imageLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+        imageLabel.BorderSizePixel = 0
+        imageLabel.Size = UDim2.new(1, 0, 1, 0)
+        imageLabel.Image = "rbxassetid://9930005090"
+        chatTextLabel.Parent = chatBillboardGui
+        chatTextLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+        chatTextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        chatTextLabel.BackgroundTransparency = 1
+        chatTextLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+        chatTextLabel.BorderSizePixel = 0
+        chatTextLabel.LayoutOrder = 5
+        chatTextLabel.Position = UDim2.new(0.5, 0, 0, 0)
+        chatTextLabel.Size = UDim2.new(2, 0, 0.300000012, 0)
+        chatTextLabel.Font = Enum.Font.Arcade
+        chatTextLabel.Text = ""
+        chatTextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        chatTextLabel.TextScaled = true
+        chatTextLabel.TextSize = 9
+        chatTextLabel.TextStrokeTransparency = 0
+        chatTextLabel.TextWrapped = true
+        textSizeConstraint.Parent = chatTextLabel
+        textSizeConstraint.MaxTextSize = 9
+        local function displayChatMessage(messageText, textPriority)
+            if (_G.LastTxtFloppaPriority or textPriority) <= textPriority then
+                _G.LastTxtFloppaPriority = textPriority
+                if cooldownTask then
+                    task.cancel(cooldownTask)
+                end
+                if textAnimationTask then
+                    task.cancel(textAnimationTask)
+                end
+                chatTextLabel.Text = ""
+                textAnimationTask = task.spawn(function()
+                    for characterIndex = 0, # messageText do
+                        if characterModel.Parent == nil then
+                            soundEffect:Destroy()
+                            break
+                        end
+                        chatTextLabel.Text = string.sub(messageText, 1, characterIndex)
+                        soundEffect:Play()
+                        task.wait(0.05)
+                    end
+                end)
+                cooldownTask = task.delay(15, function()
+                    print("cooldown ended")
+                    _G.LastTxtFloppaPriority = 0
+                    chatTextLabel.Text = ""
+                end)
+            end
+        end
+        task.spawn(function()
+            local displayedMessageIndices = {}
+            local respawnCoroutine = task.spawn(function()
+                wait(60)
+                while true do
+                    for _ = 1, # chatMessages do
+                        local randomIndex = math.random(1, # chatMessages)
+                        if table.find(displayedMessageIndices, randomIndex) ~= nil then
+                            repeat
+                                randomIndex = math.random(1, # chatMessages)
+                            until table.find(displayedMessageIndices, randomIndex) == nil
+                        end
+                        table.insert(displayedMessageIndices, randomIndex)
+                        displayChatMessage(chatMessages[randomIndex], 1)
+                        wait(60)
+                    end
+                    print("Repeated!")
+                    table.clear(displayedMessageIndices)
+                end
+            end)
+            while characterModel.Parent do
+                task.wait(1)
+            end
+            print("Floppa Died!")
+            chatBillboardGui:Destroy()
+            task.cancel(respawnCoroutine)
+        end)
+        return displayChatMessage
+    end
+end
+COAroundPParams = OverlapParams.new()
+COAroundPParams.FilterDescendantsInstances = {
+    GetPlayerCharacter(),
+    workspaceService.Map,
+    workspaceService.Plots,
+    workspaceService.Waypoints,
+    workspaceService.Slots
+}
+COAroundPParams.FilterType = Enum.RaycastFilterType.Exclude
+function IsItemInPlayerPlot(plotItem)
+    if not plotItem:IsDescendantOf(workspaceService.PlotItems) then
+        return true
+    end
+    local remainingTimeInHouse = _G.RemainingTimeInHouse
+    if remainingTimeInHouse and remainingTimeInHouse.Parent then
+        local plotName = remainingTimeInHouse.Parent.Parent.Parent.Parent.Name
+        if plotName and plotItem:IsDescendantOf(workspaceService.PlotItems[plotName]) then
+            return true
+        end
+    end
+end
+function GetTeslaCoilFromPlayerPlot()
+    local remainingTimeInHouse = _G.RemainingTimeInHouse
+    if remainingTimeInHouse and (remainingTimeInHouse.Parent and IsPlayerInsideSafeZone(localPlayer)) then
+        return remainingTimeInHouse.Parent.Parent.Parent.Parent.TeslaCoil.ZapPart
+    end
+end
+function CheckObjectsAroundPlayer()
+    local playerRoot = GetPlayerRoot()
+    if playerRoot then
+        local connectedPartsList = {}
+        local teslaCoil = nil
+        local function isPartConnectable(part)
+            if not part:IsDescendantOf(workspaceService.Map) and (not part:IsDescendantOf(workspaceService.Plots) and (not part:IsDescendantOf(workspaceService.Waypoints) and (not part:IsDescendantOf(workspaceService.Slots) and part.Parent))) and (part.Parent:IsA("Model") and (part.Parent:FindFirstChildOfClass("BasePart") or (part.Parent:FindFirstChildOfClass("Part") or part.Parent:FindFirstChildOfClass("MeshPart")))) then
+                local partParent = part.Parent
+                local isConnected2 = partParent:GetAttribute("Connected2")
+                if CheckIfKunaiIsOnPlayer(partParent) == "Using" or CheckIfPlayerIsHoldingFood(partParent) == "Using" then
+                    return false
+                end
+                if not IsItemInPlayerPlot(partParent) then
+                    return false
+                end
+                teslaCoil = GetTeslaCoilFromPlayerPlot()
+                local playerFromCharacter
+                if partParent:FindFirstChildOfClass("Humanoid") then
+                    playerFromCharacter = playersService:GetPlayerFromCharacter(partParent)
+                else
+                    playerFromCharacter = nil
+                end
+                if not (playerFromCharacter or isConnected2) then
+                    return true
+                end
+            end
+        end
+        local partsInRadius = workspaceService:GetPartBoundsInRadius(playerRoot.Position, 28, COAroundPParams)
+        local iterator, partIndex, index = pairs(partsInRadius)
+        local unknownValue = teslaCoil
+        while true do
+            local instance
+            index, instance = iterator(partIndex, index)
+            if index == nil then
+                break
+            end
+            if isPartConnectable(instance) then
+                local instanceParent = instance.Parent
+                if not table.find(connectedPartsList, instanceParent) then
+                    table.insert(connectedPartsList, instanceParent)
+                end
+            end
+        end
+        return connectedPartsList, unknownValue
+    end
+end
+local stickyRemoverPart = nil
+local function findSprayCan()
+    local playerCFrame = GetPlayerCFrame()
+    local toyFolder = spawnedInToysFolder
+    local toyIterator, childIndex2, toyIndex = pairs(toyFolder:GetChildren())
+    local sprayCan = nil
+    while true do
+        local toyKey, toy = toyIterator(childIndex2, toyIndex)
+        if toyKey == nil then
+            break
+        end
+        toyIndex = toyKey
+        if toy.Name == "SprayCanWD" and (toy:FindFirstChild("StickyRemoverPart") and (toy.PrimaryPart and Getdistancefromcharacter(toy.PrimaryPart.Position) < 30)) then
+            if toy.StickyRemoverPart:FindFirstChildOfClass("TouchTransmitter") then
+                sprayCan = toy
+            else
+                DeleteToyRE:FireServer(toy)
+            end
+        end
+    end
+    if not sprayCan then
+        if playerCFrame then
+            local sprayCanData = {
+                "SprayCanWD",
+                CFrame.new(playerCFrame.Position.X, playerCFrame.Position.Y, playerCFrame.Position.Z, - 0.133750245, - 0.471861839, 0.871468484, - 3.7252903e-9, 0.879369617, 0.476139903, - 0.991015136, 0.0636838302, - 0.117615893),
+                Vector3.new(0, 97.69000244140625, 0)
+            }
+            SpawnToy(sprayCanData)
+        end
+        BuyToy:InvokeServer("SprayCanWD")
+    end
+    if sprayCan and not sprayCan:GetAttribute("Connected2") then
+        local descendantAddedConnection = sprayCan.DescendantAdded:Connect(function(descendant)
+            if descendant.Name == "PartOwner" and descendant.Value ~= localPlayer.Name then
+                sprayCan:SetAttribute("AlreadySetOwnerShip", false)
+            end
+        end)
+        local hitboxPart = sprayCan:FindFirstChild("Hitbox")
+        local stickyRemoverPart = sprayCan:FindFirstChild("StickyRemoverPart")
+        task.spawn(function()
+            while sprayCan.Parent do
+                if not stickyRemoverPart:FindFirstChildOfClass("TouchTransmitter") then
+                    DeleteToyRE:FireServer(sprayCan)
+                end
+                task.wait(5)
+            end
+        end)
+        task.spawn(function()
+            while sprayCan.Parent do
+                if not sprayCan:GetAttribute("AlreadySetOwnerShip") then
+                    if SNOWshipOnce(hitboxPart) then
+                        sprayCan:SetAttribute("AlreadySetOwnerShip", true)
+                    elseif Getdistancefromcharacter(hitboxPart.Position) > 30 then
+                        DeleteToyRE:FireServer(sprayCan)
+                    end
+                end
+                task.wait(0.1)
+            end
+            stickyRemoverPart = nil
+            descendantAddedConnection:Disconnect()
+        end)
+        sprayCan:SetAttribute("Connected2", true)
+    end
+    stickyRemoverPart = sprayCan
+end
+local function getSprayCan()
+    if stickyRemoverPart then
+        return stickyRemoverPart
+    end
+    findSprayCan()
+end
+local function applySprayCanEffect(partPosition)
+    local currentSprayCan = getSprayCan()
+    local sprayCanPrimaryPart = nil
+    local characterHead = localPlayer.Character
+    if characterHead then
+        characterHead = characterHead:FindFirstChild("Head")
+    end
+    if currentSprayCan then
+        sprayCanPrimaryPart = currentSprayCan.PrimaryPart
+    end
+    if currentSprayCan and (characterHead and sprayCanPrimaryPart) then
+        local stickyRemoverPart = currentSprayCan:FindFirstChild("StickyRemoverPart")
+        if not sprayCanPrimaryPart:FindFirstChild("SprayPosRemove") and currentSprayCan:GetAttribute("AlreadySetOwnerShip") then
+            SetModelProperties(currentSprayCan)
+            local sprayPositionRemoveBodyPosition = Instance.new("BodyPosition", sprayCanPrimaryPart)
+            sprayPositionRemoveBodyPosition.Name = "SprayPosRemove"
+            sprayPositionRemoveBodyPosition.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            Vector3.new(- 453, math.random(50, 100), 1081)
+            task.spawn(function()
+                while currentSprayCan.Parent do
+                    sprayPositionRemoveBodyPosition.Position = characterHead.Position + Vector3.new(10, 500, 0)
+                    task.wait()
+                end
+            end)
+        end
+        if stickyRemoverPart and currentSprayCan:GetAttribute("AlreadySetOwnerShip") then
+            stickyRemoverPart.Position = partPosition.Position
+            task.wait()
+            stickyRemoverPart.Position = sprayCanPrimaryPart.Position
+        end
+    end
+end
+KunaiFound = nil
+function CheckIfKunaiIsOnPlayer(stickyModel)
+    if typeof(stickyModel) == "Instance" and (stickyModel:IsA("Model") and stickyModel.Parent) then
+        local stickyPart = stickyModel:FindFirstChild("StickyPart")
+        local playerCharacter = GetPlayerCharacter()
+        local stickyWeld = stickyPart and stickyPart:FindFirstChild("StickyWeld")
+        if stickyWeld then
+            local weldPart1 = stickyWeld.Part1
+            return stickyWeld.Enabled ~= false and (weldPart1 and (weldPart1:IsDescendantOf(playerCharacter) and "Using" or "Used") or "No use!") or "Useless"
+        end
+    end
+end
+function CheckIfPlayerIsHoldingFood(holdableModel)
+    if typeof(holdableModel) == "Instance" and (holdableModel:IsA("Model") and holdableModel.Parent) then
+        local holdPart = holdableModel:FindFirstChild("HoldPart")
+        local playerCharacter2 = GetPlayerCharacter()
+        local rigidConstraint = holdPart and holdPart:FindFirstChild("RigidConstraint")
+        if rigidConstraint then
+            local rigidAttachment1 = rigidConstraint.Attachment1
+            return rigidConstraint.Enabled ~= false and (rigidAttachment1 and (rigidAttachment1:IsDescendantOf(playerCharacter2) and "Using" or "Used") or "No use!") or "Useless"
+        end
+    end
+end
+function CheckKunai()
+    if not KunaiFound then
+        local playerCFrame = GetPlayerCFrame()
+        local vu17 = spawnedInToysFolder
+        local pairsIterator, iteratorValue, childIndex = pairs(vu17:GetChildren())
+        local kunaiInstance = nil
+        while true do
+            local index, child = pairsIterator(iteratorValue, childIndex)
+            if index == nil then
+                break
+            end
+            childIndex = index
+            if child.Name == "NinjaKunai" and (child.PrimaryPart and child.Parent) then
+                if CheckIfKunaiIsOnPlayer(child) ~= "No use!" or Getdistancefromcharacter(child.PrimaryPart.Position) <= 30 then
+                    if CheckIfKunaiIsOnPlayer(child) ~= "Useless" then
+                        kunaiInstance = child
+                    else
+                        DeleteToyRE:FireServer(child)
+                    end
+                else
+                    DeleteToyRE:FireServer(child)
+                    print("Destroy1")
+                end
+            end
+        end
+        if not kunaiInstance then
+            if playerCFrame then
+                local ninjaKunaiData = {
+                    "NinjaKunai",
+                    CFrame.new(playerCFrame.Position.X, playerCFrame.Position.Y, playerCFrame.Position.Z, - 0.133750245, - 0.471861839, 0.871468484, - 3.7252903e-9, 0.879369617, 0.476139903, - 0.991015136, 0.0636838302, - 0.117615893),
+                    Vector3.new(0, 97.69000244140625, 0)
+                }
+                SpawnToy(ninjaKunaiData)
+            end
+            BuyToy:InvokeServer("NinjaKunai")
+        end
+        if kunaiInstance and (not kunaiInstance:GetAttribute("Connected2") and kunaiInstance:FindFirstChild("StickyPart")) and (kunaiInstance.StickyPart:FindFirstChild("StickyWeld") and kunaiInstance.Parent) then
+            local stickyPart = kunaiInstance.StickyPart
+            local _ = stickyPart.StickyWeld
+            local antiKickFunction = SetKunaiToyAntiKick(kunaiInstance)
+            local stickyAttachmentData = {
+                stickyPart,
+                localPlayer.Character:FindFirstChild("Left Leg"),
+                CFrame.new(0, - 0.5, 0) * CFrame.Angles(math.rad(0), math.rad(0), math.rad(90))
+            }
+            local descendantAddedConnection2 = kunaiInstance.DescendantAdded:Connect(function(partOwnerValue)
+                if partOwnerValue.Name == "PartOwner" and partOwnerValue.Value ~= localPlayer.Name then
+                    kunaiInstance:SetAttribute("AlreadySetOwnerShip", false)
+                end
+            end)
+            task.spawn(function()
+                while kunaiInstance.Parent do
+                    if CheckIfKunaiIsOnPlayer(kunaiInstance) == "Useless" then
+                        DeleteToyRE:FireServer(kunaiInstance)
+                    end
+                    if CheckIfKunaiIsOnPlayer(kunaiInstance) ~= "Used" then
+                        if CheckIfKunaiIsOnPlayer(kunaiInstance) == "No use!" then
+                            if Getdistancefromcharacter(stickyPart.Position) >= 30 then
+                                DeleteToyRE:FireServer(kunaiInstance)
+                            elseif SNOWshipOnce(stickyPart) then
+                                replicatedStorageService:WaitForChild("PlayerEvents"):WaitForChild("StickyPartEvent"):FireServer(unpack(stickyAttachmentData))
+                            end
+                        end
+                    elseif Getdistancefromcharacter(stickyPart.Position) >= 30 then
+                        DeleteToyRE:FireServer(kunaiInstance)
+                    else
+                        SNOWship(stickyPart)
+                    end
+                    task.wait()
+                end
+                print("Pew!")
+            end)
+            task.spawn(function()
+                while kunaiInstance.Parent do
+                    if not kunaiInstance:GetAttribute("AlreadySetOwnerShip") then
+                        if SNOWshipOnce(stickyPart) then
+                            if CheckIfKunaiIsOnPlayer(kunaiInstance) ~= "Using" then
+                                replicatedStorageService:WaitForChild("PlayerEvents"):WaitForChild("StickyPartEvent"):FireServer(unpack(stickyAttachmentData))
+                                if not _G.FirstFloppaMessage then
+                                    antiKickFunction("Don\'t worry my buddy, you won\'t get kicked", 3)
+                                    _G.FirstFloppaMessage = true
+                                end
+                            else
+                                kunaiInstance:SetAttribute("AlreadySetOwnerShip", true)
+                            end
+                        elseif Getdistancefromcharacter(stickyPart.Position) > 30 then
+                            DeleteToyRE:FireServer(kunaiInstance)
+                        end
+                    end
+                    task.wait()
+                end
+                stickyPart = nil
+                KunaiFound = nil
+                ShurikenEquipped = false
+                descendantAddedConnection2:Disconnect()
+                print("Pew!")
+            end)
+            kunaiInstance:SetAttribute("Connected2", true)
+        end
+        KunaiFound = kunaiInstance
+    end
+end
+function GetKunai()
+    if not KunaiFound then
+        CheckKunai()
+    end
+end
+local foodBananaInstance = nil
+local bananaPeelInstance = nil
+local function isToyEdibleOrHoldable(toyInstance)
+    if toyInstance then
+        local ediblePart = toyInstance:FindFirstChild("EdiblePart")
+        local holdPartAttachment = toyInstance:FindFirstChild("HoldPart")
+        if holdPartAttachment then
+            holdPartAttachment = holdPartAttachment.RigidConstraint.Attachment1
+        end
+        if not (ediblePart or holdPartAttachment) then
+            return true
+        end
+    end
+end
+local function findFoodBanana()
+    local playerCFrame2 = GetPlayerCFrame()
+    local parentInstance = spawnedInToysFolder
+    local pairsIterator2, iteratorState, childIndex2 = pairs(parentInstance:GetChildren())
+    local foodBananaInstance = nil
+    while true do
+        local child2
+        childIndex2, child2 = pairsIterator2(iteratorState, childIndex2)
+        if childIndex2 == nil then
+            break
+        end
+        if child2.Name == "FoodBanana" and (child2:GetAttribute("RagdollToy") and isToyEdibleOrHoldable(child2)) then
+            foodBananaInstance = child2
+        end
+    end
+    if not foodBananaInstance then
+        local foodBanana = spawnedInToysFolder:FindFirstChild("FoodBanana")
+        if foodBanana then
+            if isToyEdibleOrHoldable(foodBanana) then
+                foodBanana:SetAttribute("RagdollToy", true)
+            else
+                local ediblePart2 = foodBanana:FindFirstChild("EdiblePart")
+                local holdPart = foodBanana.HoldPart
+                local rigidConstraint = holdPart.RigidConstraint
+                if ediblePart2 and not rigidConstraint.Attachment1 then
+                    local holdItemData = {
+                        foodBanana,
+                        localPlayer.Character
+                    }
+                    holdPart.HoldItemRemoteFunction:InvokeServer(unpack(holdItemData))
+                elseif ediblePart2 and rigidConstraint.Attachment1 and (rigidConstraint.Attachment1:IsDescendantOf(localPlayer.Character) and not holdPart.EatingSound.IsPlaying) then
+                    replicatedStorageService.HoldEvents.Use:FireServer(foodBanana)
+                    task.wait(0.5)
+                elseif not ediblePart2 and rigidConstraint.Attachment1 and rigidConstraint.Attachment1:IsDescendantOf(localPlayer.Character) then
+                    local dropItemData = {
+                        foodBanana,
+                        CFrame.new(playerCFrame2.Position.X, playerCFrame2.Position.Y, playerCFrame2.Position.Z, - 0.133750245, - 0.471861839, 0.871468484, - 3.7252903e-9, 0.879369617, 0.476139903, - 0.991015136, 0.0636838302, - 0.117615893),
+                        Vector3.new(0, 97.69000244140625, 0)
+                    }
+                    holdPart.DropItemRemoteFunction:InvokeServer(unpack(dropItemData))
+                end
+            end
+        else
+            local foodBananaData = {
+                "FoodBanana",
+                CFrame.new(508.073517, 67.2614441, - 261.901917, - 0.133750245, - 0.471861839, 0.871468484, - 3.7252903e-9, 0.879369617, 0.476139903, - 0.991015136, 0.0636838302, - 0.117615893),
+                Vector3.new(0, 97.69000244140625, 0)
+            }
+            SpawnToy(foodBananaData)
+            BuyToy:InvokeServer("FoodBanana")
+        end
+    end
+    if foodBananaInstance and foodBananaInstance:FindFirstChild("HoldPart") and (foodBananaInstance.HoldPart:FindFirstChild("RigidConstraint") and not foodBananaInstance:GetAttribute("Connected2")) then
+        local descendantAddedConnection3 = foodBananaInstance.DescendantAdded:Connect(function(descendant)
+            if descendant.Name == "PartOwner" and descendant.Value ~= localPlayer.Name then
+                foodBananaInstance:SetAttribute("AlreadySetOwnerShip", nil)
+            end
+        end)
+        local hitboxPart = foodBananaInstance:FindFirstChild("HitboxPart")
+        task.spawn(function()
+            while foodBananaInstance.Parent do
+                if not foodBananaInstance:GetAttribute("AlreadySetOwnerShip") then
+                    if SNOWshipOnce(hitboxPart) then
+                        for _ = 1, 15 do
+                            destroyGrabLineEvent:FireServer(hitboxPart)
+                            task.wait()
+                        end
+                        foodBananaInstance:SetAttribute("AlreadySetOwnerShip", true)
+                    elseif Getdistancefromcharacter(hitboxPart.Position) > 30 then
+                        DeleteToyRE:FireServer(foodBananaInstance)
+                    end
+                end
+                task.wait(0.1)
+            end
+            descendantAddedConnection3:Disconnect()
+            foodBananaInstance = nil
+            bananaPeelInstance = nil
+            hitboxPart = nil
+        end)
+        foodBananaInstance:SetAttribute("Connected2", true)
+    end
+    foodBananaInstance = foodBananaInstance
+end
+local function getBananaModel()
+    if foodBananaInstance and foodBananaInstance.Parent ~= nil then
+        return foodBananaInstance
+    end
+    findFoodBanana()
+end
+local function setBananaModelProperties(positionPart)
+    local bananaModel = getBananaModel()
+    local bananaPeelPrimaryPart = nil
+    local characterHead = localPlayer.Character
+    if characterHead then
+        characterHead = characterHead:FindFirstChild("Head")
+    end
+    if bananaModel then
+        bananaPeelPrimaryPart = bananaModel.PrimaryPart
+    end
+    if bananaModel and (characterHead and bananaPeelPrimaryPart) then
+        if not bananaPeelInstance then
+            local iteratorFunction, iteratorState, iteratorIndex = pairs(bananaModel:GetChildren())
+            while true do
+                local childInstance
+                iteratorIndex, childInstance = iteratorFunction(iteratorState, iteratorIndex)
+                if iteratorIndex == nil then
+                    break
+                end
+                if childInstance.Name == "BananaPeel" and childInstance:FindFirstChildOfClass("TouchTransmitter") then
+                    bananaPeelInstance = childInstance
+                end
+            end
+            print("Done!")
+        end
+        local bananaPeelTouchTransmitter = bananaPeelInstance
+        bananaPeelTouchTransmitter.Size = Vector3.new(2, 2, 2)
+        bananaPeelTouchTransmitter.Transparency = 1
+        if not bananaPeelPrimaryPart:FindFirstChild("FoodBananaPosRemove") and bananaModel:GetAttribute("AlreadySetOwnerShip") then
+            SetModelProperties(bananaModel)
+            local bodyPosition = Instance.new("BodyPosition", bananaModel.PrimaryPart)
+            bodyPosition.Name = "FoodBananaPosRemove"
+            bodyPosition.MaxForce = Vector3.new(12500, 12500, 12500)
+            task.spawn(function()
+                while bananaModel.Parent do
+                    bodyPosition.Position = characterHead.Position + Vector3.new(0, 500, 0)
+                    task.wait()
+                end
+            end)
+        end
+        if bananaPeelTouchTransmitter and (positionPart and bananaModel:GetAttribute("AlreadySetOwnerShip")) then
+            bananaPeelTouchTransmitter.Position = positionPart.Position
+            task.wait()
+            bananaPeelTouchTransmitter.Position = bananaPeelPrimaryPart.Position
+        end
+    end
+end
+local campfireInstance = nil
+holdfirePartFound = nil
+function checkHoldFirePart()
+    local vu17_2 = spawnedInToysFolder
+    local iteratorFunction2, iteratorState2, iteratorIndex2 = pairs(vu17_2:GetChildren())
+    local campfirePart = nil
+    while true do
+        local childInstance2
+        iteratorIndex2, childInstance2 = iteratorFunction2(iteratorState2, iteratorIndex2)
+        if iteratorIndex2 == nil then
+            break
+        end
+        if childInstance2.Name == "Campfire" and not childInstance2:GetAttribute("FirePlayerPart") then
+            if childInstance2.FirePlayerPart.CanBurn.Value then
+                campfirePart = childInstance2
+            end
+        end
+    end
+    if not campfirePart then
+        local campfireData = {
+            "Campfire",
+            CFrame.new(508.073517, 67.2614441, - 261.901917, - 0.133750245, - 0.471861839, 0.871468484, - 3.7252903e-9, 0.879369617, 0.476139903, - 0.991015136, 0.0636838302, - 0.117615893),
+            Vector3.new(0, 97.69000244140625, 0)
+        }
+        SpawnToy(campfireData)
+        BuyToy:InvokeServer("Campfire")
+    end
+    holdfirePartFound = campfirePart
+end
+local function getHoldFirePart()
+    if holdfirePartFound and holdfirePartFound.Parent ~= nil then
+        return holdfirePartFound
+    end
+    checkHoldFirePart()
+end
+local function findCampfire()
+    local playerCFrame = GetPlayerCFrame()
+    local parentInstance = spawnedInToysFolder
+    local iteratorFunction3, iteratorState3, iteratorIndex3 = pairs(parentInstance:GetChildren())
+    local spawnedCampfire = nil
+    local firePlayerPart = nil
+    while true do
+        local childInstance3
+        iteratorIndex3, childInstance3 = iteratorFunction3(iteratorState3, iteratorIndex3)
+        if iteratorIndex3 == nil then
+            break
+        end
+        if childInstance3.Name == "Campfire" and (childInstance3.PrimaryPart and (Getdistancefromcharacter(childInstance3.PrimaryPart.Position) < 30 and childInstance3.FirePlayerPart.CanBurn.Value)) then
+            spawnedCampfire = childInstance3
+        end
+    end
+    if not spawnedCampfire then
+        if playerCFrame then
+            local campfireData = {
+                "Campfire",
+                CFrame.new(playerCFrame.Position.X, playerCFrame.Position.Y, playerCFrame.Position.Z, - 0.133750245, - 0.471861839, 0.871468484, - 3.7252903e-9, 0.879369617, 0.476139903, - 0.991015136, 0.0636838302, - 0.117615893),
+                Vector3.new(0, 97.69000244140625, 0)
+            }
+            SpawnToy(campfireData)
+        end
+        BuyToy:InvokeServer("Campfire")
+    end
+    if spawnedCampfire and spawnedCampfire:FindFirstChild("FirePlayerPart") and (spawnedCampfire.FirePlayerPart:FindFirstChild("CanBurn") and not spawnedCampfire:GetAttribute("Connected2")) then
+        local descendantAddedConnection4 = spawnedCampfire.DescendantAdded:Connect(function(descendant)
+            if descendant.Name == "PartOwner" and descendant.Value ~= localPlayer.Name then
+                spawnedCampfire:SetAttribute("AlreadySetOwnerShip", false)
+            end
+        end)
+        task.spawn(function()
+            lastpos = GetPlayerCFrame()
+            firePlayerPart = spawnedCampfire.FirePlayerPart
+            while spawnedCampfire.Parent do
+                local isCampfireExtinguished = not spawnedCampfire.FirePlayerPart.CanBurn.Value and getHoldFirePart()
+                if isCampfireExtinguished then
+                    firePlayerPart.Position = isCampfireExtinguished.FirePlayerPart.Position
+                end
+                if not spawnedCampfire:GetAttribute("AlreadySetOwnerShip") then
+                    if SNOWshipOnce(firePlayerPart) then
+                        spawnedCampfire:SetAttribute("AlreadySetOwnerShip", true)
+                    elseif Getdistancefromcharacter(firePlayerPart.Position) > 30 then
+                        DeleteToyRE:FireServer(spawnedCampfire)
+                    end
+                end
+                task.wait(0.1)
+            end
+            descendantAddedConnection4:Disconnect()
+            print("Pew!")
+        end)
+        spawnedCampfire:SetAttribute("Connected2", true)
+    end
+    campfireInstance = spawnedCampfire
+end
+local function getCampfire()
+    if campfireInstance and campfireInstance.Parent ~= nil then
+        return campfireInstance
+    end
+    findCampfire()
+end
+local function handleCampfireTouch(partPosition)
+    local currentCampfire = getCampfire()
+    local campfirePrimaryPart = nil
+    local characterHead2 = localPlayer.Character
+    if characterHead2 then
+        characterHead2 = characterHead2:FindFirstChild("Head")
+    end
+    if currentCampfire then
+        campfirePrimaryPart = currentCampfire.PrimaryPart
+    end
+    if currentCampfire and (characterHead2 and campfirePrimaryPart) then
+        local campfireFirePart = currentCampfire:FindFirstChild("FirePlayerPart")
+        local campfirePosRemove = campfirePrimaryPart:FindFirstChild("CampfirePosRemove")
+        campfireFirePart.Size = Vector3.new(2, 2, 2)
+        if not campfirePosRemove and currentCampfire:GetAttribute("AlreadySetOwnerShip") then
+            SetModelProperties(currentCampfire)
+            local bodyPosition2 = Instance.new("BodyPosition", currentCampfire.PrimaryPart)
+            bodyPosition2.Name = "CampfirePosRemove"
+            bodyPosition2.MaxForce = Vector3.new(12500, 12500, 12500)
+            Vector3.new(- 453, math.random(50, 100), 1081)
+            task.spawn(function()
+                while currentCampfire.Parent do
+                    bodyPosition2.Position = characterHead2.Position + Vector3.new(5, 500, 0)
+                    task.wait()
+                end
+            end)
+        end
+        if campfireFirePart and (partPosition and (currentCampfire:GetAttribute("AlreadySetOwnerShip") and campfirePrimaryPart)) then
+            campfireFirePart.Position = partPosition.Position
+            task.wait()
+            campfireFirePart.Position = campfirePrimaryPart.Position
+        end
+    end
+end
+smalldiceToyFound = nil
+function CheckFakeAim()
+    local playerCFrame2 = GetPlayerCFrame()
+    local vu17Children = spawnedInToysFolder
+    local iteratorFunction4, childIndex, iteratorIndex4 = pairs(vu17Children:GetChildren())
+    local spawnedDice = nil
+    while true do
+        local childInstance4
+        iteratorIndex4, childInstance4 = iteratorFunction4(childIndex, iteratorIndex4)
+        if iteratorIndex4 == nil then
+            break
+        end
+        if childInstance4.Name == "DiceSmall" and (childInstance4:FindFirstChild("Center") and (childInstance4.PrimaryPart and Getdistancefromcharacter(childInstance4.PrimaryPart.Position) < 30)) then
+            spawnedDice = childInstance4
+        end
+    end
+    if not spawnedDice then
+        if playerCFrame2 then
+            local diceSmallData = {
+                "DiceSmall",
+                CFrame.new(playerCFrame2.Position.X, playerCFrame2.Position.Y, playerCFrame2.Position.Z, - 0.133750245, - 0.471861839, 0.871468484, - 3.7252903e-9, 0.879369617, 0.476139903, - 0.991015136, 0.0636838302, - 0.117615893),
+                Vector3.new(0, 97.69000244140625, 0)
+            }
+            SpawnToy(diceSmallData)
+        end
+        BuyToy:InvokeServer("DiceSmall")
+    end
+    if spawnedDice and (spawnedDice:FindFirstChild("Center") and not spawnedDice:GetAttribute("Connected2")) then
+        local descendantAddedConnection = spawnedDice.DescendantAdded:Connect(function(descendant2)
+            if descendant2.Name == "PartOwner" and descendant2.Value ~= localPlayer.Name then
+                spawnedDice:SetAttribute("AlreadySetOwnerShip", false)
+            end
+        end)
+        local soundPart = spawnedDice:FindFirstChild("SoundPart")
+        task.spawn(function()
+            while spawnedDice.Parent do
+                if not spawnedDice:GetAttribute("AlreadySetOwnerShip") then
+                    if SNOWshipOnce(soundPart) then
+                        spawnedDice:SetAttribute("AlreadySetOwnerShip", true)
+                    elseif Getdistancefromcharacter(soundPart.Position) > 30 then
+                        DeleteToyRE:FireServer(spawnedDice)
+                    end
+                end
+                if not _G.FireworkEffectSpam then
+                    DeleteToyRE:FireServer(spawnedDice)
+                end
+                task.wait(0.1)
+            end
+            soundPart = nil
+            smalldiceToyFound = nil
+            spawnedDice = nil
+            descendantAddedConnection:Disconnect()
+            print("Pew!")
+        end)
+        spawnedDice:SetAttribute("Connected2", true)
+    end
+    smalldiceToyFound = spawnedDice
+end
+function GetFakeAim()
+    if smalldiceToyFound and smalldiceToyFound.Parent ~= nil then
+        return smalldiceToyFound
+    end
+    CheckFakeAim()
+end
+function GetFakeAim2()
+    local fakeAimPart = GetFakeAim()
+    local playerCharacter = localPlayer.Character
+    local aimTargetPart
+    if fakeAimPart then
+        aimTargetPart = fakeAimPart.PrimaryPart
+    else
+        aimTargetPart = nil
+    end
+    if fakeAimPart and (playerCharacter and aimTargetPart) then
+        hitpart = fakeAimPart:FindFirstChild("StickyRemoverPart")
+        if not aimTargetPart:FindFirstChild("AimPosRemove") and fakeAimPart:GetAttribute("AlreadySetOwnerShip") then
+            local aimPositionBodyPosition = Instance.new("BodyPosition", aimTargetPart)
+            aimPositionBodyPosition.Name = "AimPosRemove"
+            aimPositionBodyPosition.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            aimPositionBodyPosition.D = 200
+            aimPositionBodyPosition.P = 50000
+            task.spawn(function()
+                while fakeAimPart.Parent do
+                    aimPositionBodyPosition.Position = Vector3.new(1000, 400, 10000)
+                    task.wait(0.05)
+                    aimPositionBodyPosition.Position = Vector3.new(- 1000, 400, 10000)
+                    task.wait(0.05)
+                end
+            end)
+        end
+        return aimTargetPart
+    end
+end
+local creatureBlobmanInstance = nil
+local function findCreatureBlobman()
+    local localPlayerCharacter = GetPlayerCharacter()
+    local parentInstance = spawnedInToysFolder
+    local iterator, iteratorState, index = pairs(parentInstance:GetChildren())
+    local creatureBlobman = nil
+    while true do
+        local child
+        index, child = iterator(iteratorState, index)
+        if index == nil then
+            break
+        end
+        if child.Name == "CreatureBlobman" then
+            creatureBlobman = child
+        end
+    end
+    if not creatureBlobman then
+        if spawnedInToysFolder:FindFirstChild("CreatureBlobman") then
+            creatureBlobman = spawnedInToysFolder.CreatureBlobman
+        else
+            local spawnData = {
+                "CreatureBlobman",
+                CFrame.new(localPlayerCharacter.Head.Position),
+                Vector3.new(0, 97.69000244140625, 0)
+            }
+            SpawnToy(spawnData)
+            BuyToy:InvokeServer("CreatureBlobman")
+        end
+    end
+    creatureBlobmanInstance = creatureBlobman
+end
+local function getLastBlobmanSeat()
+    if creatureBlobmanInstance and creatureBlobmanInstance.Parent then
+        return creatureBlobmanInstance
+    end
+    findCreatureBlobman()
+end
+local userInterface = orionXHub
+local flingThingsWindow = orionXHub.MakeWindow(userInterface, {
+    Name = "Fling Things and People",
+    HidePremium = true,
+    SaveConfig = true,
+    ConfigFolder = "FTAPConfig",
+    IntroEnabled = false,
+    KeyToOpenWindow = "M",
+    FreeMouse = true
+})
+local combatTab = flingThingsWindow:MakeTab({
+    Name = "Combat",
+    Icon = "rbxassetid://7485051715",
+    PremiumOnly = false
+})
+LongReachGrab_Player = flingThingsWindow:MakeTab({
+    Name = "Blobman Grab",
+    Icon = "rbxassetid://7734058599",
+    PremiumOnly = false
+})
+local invincibilityTab = flingThingsWindow:MakeTab({
+    Name = "Invincibility",
+    Icon = "rbxassetid://7734056608",
+    PremiumOnly = false
+})
+local playerTab = flingThingsWindow:MakeTab({
+    Name = "Player",
+    Icon = "rbxassetid://7743871002",
+    PremiumOnly = false
+})
+Esp_Tab = flingThingsWindow:MakeTab({
+    Name = "ESP",
+    Icon = "rbxassetid://7733774602",
+    PremiumOnly = false
+})
+local explosionsTab = flingThingsWindow:MakeTab({
+    Name = "Explosions",
+    Icon = "rbxassetid://17837704089",
+    PremiumOnly = false
+})
+local teleportTab = flingThingsWindow:MakeTab({
+    Name = "Teleport",
+    Icon = "rbxassetid://7733992829",
+    PremiumOnly = false
+})
+local customLineTab = flingThingsWindow:MakeTab({
+    Name = "Custom Line",
+    Icon = "rbxassetid://7734022107",
+    PremiumOnly = false
+})
+local grabAurasTab = flingThingsWindow:MakeTab({
+    Name = "Grab Auras",
+    Icon = "rbxassetid://7733955740",
+    PremiumOnly = false
+})
+local keybindsTab = flingThingsWindow:MakeTab({
+    Name = "Keybinds",
+    Icon = "rbxassetid://11710306232",
+    PremiumOnly = false
+})
+local loopPlayersTab = flingThingsWindow:MakeTab({
+    Name = "Loop Players",
+    Icon = "rbxassetid://7733964640",
+    PremiumOnly = false
+})
+local autoTab = flingThingsWindow:MakeTab({
+    Name = "Auto",
+    Icon = "rbxassetid://7733916988",
+    PremiumOnly = false
+})
+local miscTab = flingThingsWindow:MakeTab({
+    Name = "Misc",
+    Icon = "rbxassetid://7733917120",
+    PremiumOnly = false
+})
+local discordServerTab = flingThingsWindow:MakeTab({
+    Name = "Discord Server",
+    Icon = "rbxassetid://16570630989",
+    PremiumOnly = false
+})
+local configTab = flingThingsWindow:MakeTab({
+    Name = "Config",
+    Icon = "rbxassetid://7734053495",
+    PremiumOnly = false
+})
+flingThingsWindow:MakeTab({
+    Name = "Premium Info",
+    Icon = "rbxassetid://7734053495",
+    PremiumOnly = false
+})
+local creditsTab = flingThingsWindow:MakeTab({
+    Name = "Credits",
+    Icon = "rbxassetid://7733687281",
+    PremiumOnly = false
+})
+local discordLink = nil
+task.spawn(function()
+    local success, loadedModule = pcall(function()
+        return loadstring(game:HttpGet("https://pastebin.com/raw/H7LRyxPH"))()
+    end)
+    if success then
+        discordLink = loadedModule[4]
+    else
+
+        
