@@ -1,20 +1,23 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Load Library (Obsidian)
+---------------------------------------------------------
+-- LOAD LIBRARY (OBSIDIAN)
+---------------------------------------------------------
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
-local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
-local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
--- Configure Scheme
+local Options = Library.Options
+
+---------------------------------------------------------
+-- CONFIGURE SCHEME
+---------------------------------------------------------
 Library.Scheme.AccentColor = Color3.fromRGB(0, 122, 255)
 Library.Scheme.BackgroundColor = Color3.fromRGB(12, 12, 12)
 Library.Scheme.SidebarColor = Color3.fromRGB(255, 255, 255)
@@ -25,19 +28,23 @@ Library.Scheme.ButtonHoverColor = Color3.fromRGB(139, 92, 246)
 Library.Scheme.TextColor = Color3.fromRGB(193, 205, 205)
 Library.Scheme.SecondaryTextColor = Color3.fromRGB(193, 205, 205)
 
--- Create Main Window
+---------------------------------------------------------
+-- CREATE MAIN WINDOW
+---------------------------------------------------------
 local Window = Library:CreateWindow({
     Title = "ASTRA",
-    Footer = "Made by Jakischak",
+    Footer = "ASTRA • Make them fear you, " .. LocalPlayer.DisplayName,
     Icon = "rbxassetid://104599341811828",
     Center = true,
     EnableCompacting = true,
-    SidebarCompacted = true, -- Icon-only sidebar
+    SidebarCompacted = true,
     AutoShow = true,
     CornerRadius = 15,
 })
 
--- Define Tabs (Image / Icon Only)
+---------------------------------------------------------
+-- TABS
+---------------------------------------------------------
 local Tabs = {
     MainTab = Window:AddTab("", "house"),
     PlayerTab = Window:AddTab("", "user"),
@@ -53,63 +60,192 @@ local Tabs = {
 }
 
 ---------------------------------------------------------
--- HOME TAB (Profile Headshot & Info)
+-- ACCOUNT STATS & GREETING
 ---------------------------------------------------------
-local ProfileGroup = Tabs.MainTab:AddLeftGroupbox("Profile", "user")
-
--- Fetch local player headshot thumbnail
 local userId = LocalPlayer.UserId
+
 local headshotUrl = Players:GetUserThumbnailAsync(
     userId,
     Enum.ThumbnailType.HeadShot,
     Enum.ThumbnailSize.Size420x420
 )
 
--- Display Headshot Image
+local accountAgeDays = LocalPlayer.AccountAge
+local joinDateString = "Unknown"
+
+pcall(function()
+    local url = "https://users.roblox.com/v1/users/" .. tostring(userId)
+    local response = HttpService:JSONDecode(game:HttpGet(url))
+
+    if response and response.created then
+        local year, month, day =
+            response.created:match("(%d+)-(%d+)-(%d+)")
+
+        if year and month and day then
+            local months = {
+                "Jan", "Feb", "Mar", "Apr",
+                "May", "Jun", "Jul", "Aug",
+                "Sep", "Oct", "Nov", "Dec"
+            }
+
+            joinDateString = string.format(
+                "%s %s, %s",
+                months[tonumber(month)] or "Jan",
+                day,
+                year
+            )
+        end
+    end
+end)
+
+local function getGreeting()
+    local hour = tonumber(os.date("!*t").hour) + 1
+
+    if hour < 12 then
+        return "Good Morning"
+    elseif hour < 18 then
+        return "Good Afternoon"
+    else
+        return "Good Evening"
+    end
+end
+
+---------------------------------------------------------
+-- HOME: WELCOME & PROFILE
+---------------------------------------------------------
+local ProfileGroup = Tabs.MainTab:AddLeftGroupbox("Welcome", "user")
+
 ProfileGroup:AddImage("ProfileHeadshot", {
     Image = headshotUrl,
-    Height = 150,
+    Height = 160,
 })
 
-ProfileGroup:AddLabel("User: " .. LocalPlayer.DisplayName .. " (@" .. LocalPlayer.Name .. ")")
-ProfileGroup:AddLabel("User ID: " .. tostring(userId))
 ProfileGroup:AddDivider()
-ProfileGroup:AddLabel("Made by Jakischak")
+ProfileGroup:AddLabel(
+    getGreeting() .. ", " .. LocalPlayer.DisplayName
+)
+ProfileGroup:AddLabel("Running ASTRA v2.4")
+ProfileGroup:AddDivider()
+ProfileGroup:AddLabel("Account Age: " .. tostring(accountAgeDays) .. " days")
+ProfileGroup:AddLabel("User ID: " .. tostring(userId))
+ProfileGroup:AddLabel("Joined: " .. joinDateString)
 
 ---------------------------------------------------------
--- ACTIONS GROUPBOX
+-- HOME: OVERLAY & INTERFACE
 ---------------------------------------------------------
-local ActionsGroup = Tabs.MainTab:AddRightGroupbox("Actions", "star")
+local InterfaceGroup =
+    Tabs.MainTab:AddRightGroupbox("Overlay & Interface", "layers")
 
-ActionsGroup:AddButton({
+---------------------------------------------------------
+-- MENU KEYBIND (OBSIDIAN BUILT-IN)
+---------------------------------------------------------
+InterfaceGroup:AddLabel("Menu Keybind")
+    :AddKeyPicker("MenuKeybind", {
+        Default = "M",
+        NoUI = true,
+        Text = "Menu Keybind",
+        Mode = "Toggle",
+    })
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+---------------------------------------------------------
+-- MAKE KEY INDICATOR SQUARE AND SYMMETRICAL
+---------------------------------------------------------
+task.defer(function()
+    task.wait(0.5)
+
+    local gui =
+        CoreGui:FindFirstChild("Obsidian")
+        or CoreGui:FindFirstChild("Library")
+
+    if not gui then
+        return
+    end
+
+    for _, obj in ipairs(gui:GetDescendants()) do
+        if obj:IsA("TextButton") and obj.Text == "M" then
+            obj.Size = UDim2.fromOffset(26, 26)
+            obj.AutomaticSize = Enum.AutomaticSize.None
+            obj.TextXAlignment = Enum.TextXAlignment.Center
+            obj.TextYAlignment = Enum.TextYAlignment.Center
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- INTERFACE TOGGLES
+---------------------------------------------------------
+InterfaceGroup:AddToggle("CustomCursor", {
+    Text = "Custom Cursor",
+    Default = false,
+    Callback = function(Value)
+    end
+})
+
+InterfaceGroup:AddToggle("Shiftlock", {
+    Text = "Shiftlock",
+    Default = false,
+    Callback = function(Value)
+    end
+})
+
+InterfaceGroup:AddToggle("CursorAlwaysOnTop", {
+    Text = "Cursor Always on Top",
+    Default = false,
+    Callback = function(Value)
+    end
+})
+
+---------------------------------------------------------
+-- HOME: SESSION & SERVER
+---------------------------------------------------------
+local ServerGroup =
+    Tabs.MainTab:AddRightGroupbox("Session & Server", "server")
+
+local placeName = "Unknown Place"
+
+pcall(function()
+    placeName = MarketplaceService:GetProductInfo(game.PlaceId).Name
+end)
+
+ServerGroup:AddLabel("Place: " .. placeName)
+
+ServerGroup:AddLabel(
+    "Players: " .. tostring(#Players:GetPlayers())
+    .. " / " .. tostring(Players.MaxPlayers)
+)
+
+ServerGroup:AddButton({
+    Text = "Rejoin Server",
+    Func = function()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end
+})
+
+ServerGroup:AddButton({
     Text = "Unload Astra Hub",
     Func = function()
         Library:Unload()
     end
 })
 
-ActionsGroup:AddButton({
-    Text = "Rejoin Server",
-    Func = function()
-        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
-    end
-})
-
-ActionsGroup:AddButton({
-    Text = "Copy Discord Link",
-    Func = function()
-        setclipboard("https://discord.gg/sunc")
-    end
-})
-
--- Enlarge custom header logo
+---------------------------------------------------------
+-- ENLARGE CUSTOM HEADER LOGO
+---------------------------------------------------------
 task.spawn(function()
     task.wait(0.5)
+
     pcall(function()
-        local gui = CoreGui:FindFirstChild("Obsidian") or CoreGui:FindFirstChild("Library")
+        local gui =
+            CoreGui:FindFirstChild("Obsidian")
+            or CoreGui:FindFirstChild("Library")
+
         if gui then
             for _, desc in ipairs(gui:GetDescendants()) do
-                if desc:IsA("ImageLabel") and desc.Image == "rbxassetid://104599341811828" then
+                if desc:IsA("ImageLabel")
+                    and desc.Image == "rbxassetid://104599341811828" then
+
                     desc.Size = UDim2.new(0, 48, 0, 48)
                 end
             end
@@ -117,4 +253,4 @@ task.spawn(function()
     end)
 end)
 
-print("ASTRA UI Loaded with Profile Headshot & Made by Jakischak.")
+print("ASTRA loaded successfully!")
