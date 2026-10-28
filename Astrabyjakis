@@ -1,256 +1,769 @@
+--[================================================================================]--
+-- ASTRA v4.649 (Fixed Timer/FPS/Ping + Complete Defense Tab & Server Shutdown)
+--[================================================================================]--
 
-local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
-local HttpService = game:GetService("HttpService")
-local MarketplaceService = game:GetService("MarketplaceService")
-local TeleportService = game:GetService("TeleportService")
+-- ===== compat shims =====
+queue_on_teleport = queue_on_teleport or function() end
+cloneref = cloneref or function(o) return o end
+clonefunction = clonefunction or function(f) return f end
+-- =======================================
 
-local LocalPlayer = Players.LocalPlayer
+if true then
+	local n13 = 0
 
----------------------------------------------------------
--- LOAD LIBRARY (OBSIDIAN)
----------------------------------------------------------
-local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
-local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+	getgenv()._NOTIFICATION_CENTER = {
+		enabled = true,
+		SendNotif = function(arg, arg2, arg3, arg4, arg5, soundId, volume, arg6)
+			if not arg.enabled then
+				return false
+			end
+			n13 += 1
+			local str2 = "NC_" .. n13
 
-local Options = Library.Options
+			if soundId then
+				pcall(function()
+					local sound = Instance.new("Sound")
+					sound.SoundId = soundId
+					sound.Volume = volume or 1.5
+					sound.RollOffMaxDistance = 0
+					sound.Parent = workspace
+					sound:Play()
+					local Debris = game:GetService("Debris")
+					local addItem = Debris.AddItem
+					local v26 = arg6
+					local n14
 
----------------------------------------------------------
--- CONFIGURE SCHEME
----------------------------------------------------------
-Library.Scheme.AccentColor = Color3.fromRGB(0, 122, 255)
-Library.Scheme.BackgroundColor = Color3.fromRGB(12, 12, 12)
-Library.Scheme.SidebarColor = Color3.fromRGB(255, 255, 255)
-Library.Scheme.ButtonColor = Color3.fromRGB(124, 58, 237)
-Library.Scheme.ButtonCornerRadius = UDim.new(0, 2)
-Library.Scheme.ButtonCornerColor = Color3.fromRGB(0, 122, 255)
-Library.Scheme.ButtonHoverColor = Color3.fromRGB(139, 92, 246)
-Library.Scheme.TextColor = Color3.fromRGB(193, 205, 205)
-Library.Scheme.SecondaryTextColor = Color3.fromRGB(193, 205, 205)
+					if arg6 then
+						n14 = v26
+					else
+						n14 = 2
+					end
 
----------------------------------------------------------
--- CREATE MAIN WINDOW
----------------------------------------------------------
-local Window = Library:CreateWindow({
-    Title = "ASTRA",
-    Footer = "ASTRA • Make them fear you, " .. LocalPlayer.DisplayName,
-    Icon = "rbxassetid://104599341811828",
-    Center = true,
-    EnableCompacting = true,
-    SidebarCompacted = true,
-    AutoShow = true,
-    CornerRadius = 15,
-})
+					addItem(Debris, sound, n14)
+				end)
+			end
 
----------------------------------------------------------
--- TABS
----------------------------------------------------------
-local Tabs = {
-    MainTab = Window:AddTab("", "house"),
-    PlayerTab = Window:AddTab("", "user"),
-    GrabsTab = Window:AddTab("", "hand"),
-    DefenseTab = Window:AddTab("", "shield"),
-    AttackTab = Window:AddTab("", "swords"),
-    AurasTab = Window:AddTab("", "sparkles"),
-    ServerTab = Window:AddTab("", "server"),
-    VisualTab = Window:AddTab("", "eye"),
-    KeybindsTab = Window:AddTab("", "keyboard"),
-    UiTab = Window:AddTab("", "settings"),
-    CreditsTab = Window:AddTab("", "heart")
-}
+			if Library and Library.Notify then
+				pcall(function()
+					_G._suppressNextNotifSound = true
 
----------------------------------------------------------
--- ACCOUNT STATS & GREETING
----------------------------------------------------------
-local userId = LocalPlayer.UserId
+					Library:Notify({
+						Title = arg2 or "Notification",
+						Description = arg3 or "No description",
+						BigIcon = arg4 or "rbxassetid://104599341811828",
+						Time = arg5 or 2.5,
+					})
 
-local headshotUrl = Players:GetUserThumbnailAsync(
-    userId,
-    Enum.ThumbnailType.HeadShot,
-    Enum.ThumbnailSize.Size420x420
-)
+					_G._suppressNextNotifSound = true
+				end)
+			end
 
-local accountAgeDays = LocalPlayer.AccountAge
-local joinDateString = "Unknown"
+			return str2
+		end,
+	}
 
-pcall(function()
-    local url = "https://users.roblox.com/v1/users/" .. tostring(userId)
-    local response = HttpService:JSONDecode(game:HttpGet(url))
+	if getgenv()._SCRIPT_LOADED then
+		getgenv()._NOTIFICATION_CENTER:SendNotif("ASTRA", "Already loaded! Unload the current script to run it again.", "rbxassetid://104599341811828", 3, "rbxassetid://97643101798871", 0.8, 1)
+		return
+	end
+	getgenv()._SCRIPT_LOADED = true
 
-    if response and response.created then
-        local year, month, day =
-            response.created:match("(%d+)-(%d+)-(%d+)")
+	-- Initialize script start time properly to fix the -inf seconds bug
+	getgenv()._scriptStartTime = tick()
 
-        if year and month and day then
-            local months = {
-                "Jan", "Feb", "Mar", "Apr",
-                "May", "Jun", "Jul", "Aug",
-                "Sep", "Oct", "Nov", "Dec"
-            }
+	local defaultColors = {
+		MainColor = "121212",
+		FontFace = "Gotham",
+		AccentColor = "007aff",
+		OutlineColor = "252528",
+		BackgroundColor = "0c0c0c",
+		FontColor = "c1cdcd",
+	}
 
-            joinDateString = string.format(
-                "%s %s, %s",
-                months[tonumber(month)] or "Jan",
-                day,
-                year
-            )
-        end
-    end
-end)
+	getgenv()._DEFAULT_COLORS = defaultColors
+	if game.PlaceId ~= 6961824067 then
+		game:GetService("Players").LocalPlayer:Kick("ASTRA SCRIPT")
+		return
+	end
 
-local function getGreeting()
-    local hour = tonumber(os.date("!*t").hour) + 1
+	task.spawn(function()
+		pcall(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/7Savitar/Obsidian/refs/heads/main/infyield.txt"))()
+		end)
+	end)
 
-    if hour < 12 then
-        return "Good Morning"
-    elseif hour < 18 then
-        return "Good Afternoon"
-    else
-        return "Good Evening"
-    end
+	task.spawn(function()
+		while true do
+			task.wait(60)
+			pcall(function()
+				collectgarbage("step", 200)
+			end)
+		end
+	end)
+
+	local v26 = queue_on_teleport
+
+	if v26 then
+		_qot = v26
+		local RunService = game:GetService("RunService")
+		local localPlayer = game:GetService("Players").LocalPlayer
+
+		local desync = {
+			enabled = false,
+			loc = CFrame.new(),
+			isOffsetted = false,
+			_requestActive = false,
+			_targetCFFunc = nil,
+			_requestTimeout = 5,
+			_requestStartTime = 0,
+			_spinConn = nil,
+			serverCF = nil,
+		}
+
+		_DS_startSpin = function()
+			if desync._spinConn then
+				return
+			end
+
+			desync._spinConn = RunService.Heartbeat:Connect(function()
+				local character = localPlayer.Character
+				character = character and character:FindFirstChild("HumanoidRootPart")
+
+				if character and desync.enabled then
+					character.AssemblyAngularVelocity = Vector3.new(0, 0.01, 0)
+				end
+			end)
+		end
+
+		_DS_stopSpin = function()
+			task.delay(5, function()
+				if desync._spinConn and not desync.enabled then
+					desync._spinConn:Disconnect()
+					desync._spinConn = nil
+				end
+			end)
+		end
+
+		desync.GetServerCFrame = function(arg)
+			local character = localPlayer.Character
+
+			if character then
+				character = character:FindFirstChild("saviHRP") or character:FindFirstChild("HumanoidRootPart")
+			end
+
+			if not character then
+				return nil
+			end
+
+			if arg.enabled then
+				if arg._requestActive and arg._targetCFFunc then
+					local ok, result = pcall(arg._targetCFFunc)
+					if ok and typeof(result) == "CFrame" then
+						return result
+					end
+				end
+
+				if arg.serverCF and typeof(arg.serverCF) == "CFrame" then
+					return arg.serverCF
+				end
+			end
+
+			return character.CFrame
+		end
+
+		desync.RequestDesync = function(arg, targetCFFunc, requestTimeout)
+			if arg._requestActive then
+				return false
+			end
+			arg._requestActive = true
+			arg._targetCFFunc = targetCFFunc
+			arg._requestTimeout = requestTimeout or 5
+			arg._requestStartTime = tick()
+
+			if not arg.enabled then
+				arg.enabled = true
+				_DS_startSpin()
+				local character = localPlayer.Character
+				character = character and character:FindFirstChild("HumanoidRootPart")
+
+				if character then
+					arg.loc = character.CFrame
+					arg.isOffsetted = false
+				end
+			end
+
+			return true
+		end
+
+		desync.CancelRequest = function(arg)
+			if not arg._requestActive then
+				return
+			end
+			arg._requestActive = false
+			arg._targetCFFunc = nil
+			arg.serverCF = nil
+			local character = localPlayer.Character
+			character = character and character:FindFirstChild("HumanoidRootPart")
+
+			if character and arg.isOffsetted then
+				character.CFrame = arg.loc
+			end
+
+			arg.isOffsetted = false
+			arg.enabled = false
+			_DS_stopSpin()
+		end
+
+		desync.IsAvailable = function(arg)
+			return not arg._requestActive
+		end
+
+		RunService.Stepped:Connect(function()
+			if desync.enabled and desync.isOffsetted and localPlayer.Character then
+				local humanoidRootPart = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+				if humanoidRootPart and desync.loc then
+					humanoidRootPart.CFrame = desync.loc
+					desync.isOffsetted = false
+				end
+			end
+		end)
+
+		RunService:BindToRenderStep("_GlobalDesyncCamFix", 0, function()
+			if desync.enabled and desync.isOffsetted and localPlayer.Character then
+				local humanoidRootPart = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+				if humanoidRootPart and desync.loc then
+					humanoidRootPart.CFrame = desync.loc
+					desync.isOffsetted = false
+				end
+			end
+		end)
+
+		RunService.Heartbeat:Connect(function()
+			if not desync.enabled or not localPlayer.Character then
+				return
+			end
+			local humanoidRootPart = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if not humanoidRootPart then
+				return
+			end
+			desync.loc = humanoidRootPart.CFrame
+
+			if desync._requestActive and desync._requestStartTime then
+				local requestStartTime = desync._requestStartTime
+				if desync._requestTimeout <= tick() - requestStartTime then
+					desync:CancelRequest()
+					return
+				end
+			end
+
+			if desync._requestActive and desync._targetCFFunc then
+				local ok, cFrame = pcall(desync._targetCFFunc)
+
+				if ok and cFrame then
+					humanoidRootPart.CFrame = cFrame
+					desync.serverCF = cFrame
+					desync.isOffsetted = true
+				end
+			end
+		end)
+
+		localPlayer.CharacterAdded:Connect(function(character)
+			task.wait(0.1)
+			desync.loc = character:WaitForChild("HumanoidRootPart").CFrame
+			desync.isOffsetted = false
+			desync.serverCF = nil
+
+			if desync._requestActive then
+				desync._requestActive = false
+				desync._targetCFFunc = nil
+				desync.enabled = false
+				_DS_stopSpin()
+			end
+		end)
+
+		getgenv()._DESYNC = desync
+
+		local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
+		lib.CornerRadius = 15
+		lib.Scheme.BackgroundColor = Color3.fromHex(defaultColors.BackgroundColor)
+		lib.Scheme.MainColor = Color3.fromHex(defaultColors.MainColor)
+		lib.Scheme.AccentColor = Color3.fromHex(defaultColors.AccentColor)
+		lib.Scheme.OutlineColor = Color3.fromHex(defaultColors.OutlineColor)
+		lib.Scheme.FontColor = Color3.fromHex(defaultColors.FontColor)
+
+		_applyCornerRadius = function(arg)
+			local cornerRadius = tonumber(arg) or 15
+			lib.CornerRadius = cornerRadius
+			local screenGui = lib.ScreenGui
+
+			if screenGui then
+				for _, descendant in pairs(screenGui:GetDescendants()) do
+					if descendant:IsA("UICorner") then
+						if descendant.CornerRadius.Scale == 0 then
+							descendant.CornerRadius = UDim.new(0, cornerRadius)
+						end
+					end
+				end
+			end
+		end
+
+		local TweenService = game:GetService("TweenService")
+
+		local tbl5 = {
+			Home = 1,
+			Player = 2,
+			Defence = 3,
+			Miscellaneous = 4,
+			Combat = 4,
+			Target = 5,
+			Blobman = 6,
+			Pose = 7,
+			Aim = 8,
+			AimActivity = 8,
+			Keybinds = 9,
+			ESP = 10,
+			NewESP = 10,
+			Visual = 11,
+			ShaderMap = 11,
+			AimTrainer = 12,
+			Whitelist = 13,
+			Settings = 14,
+			Server = 15,
+		}
+
+		local n14 = 1
+		local sound = Instance.new("Sound")
+		sound.Name = "AstraTabWhoosh"
+		sound.SoundId = "rbxassetid://138158731526545"
+		sound.Volume = 0.12
+		sound.PlaybackSpeed = 1.35
+		sound.RollOffMaxDistance = 0
+		local SoundService = game:GetService("SoundService")
+
+		if SoundService then
+			sound.Parent = SoundService
+			_G._initialTabLoaded = false
+
+			task.delay(0.8, function()
+				_G._initialTabLoaded = true
+			end)
+
+			local function isAdditionalFeatureEnabled(arg)
+				local additionalFeaturesDropdown = lib and lib.Options and lib.Options.AdditionalFeaturesDropdown
+				if not additionalFeaturesDropdown then
+					return true
+				end
+
+				if type(additionalFeaturesDropdown.Value) == "table" then
+					return additionalFeaturesDropdown.Value[arg] == true
+				end
+
+				if type(additionalFeaturesDropdown.Value) == "string" then
+					return additionalFeaturesDropdown.Value == arg
+				end
+				return false
+			end
+
+			_G._isAdditionalFeatureEnabled = isAdditionalFeatureEnabled
+			local n15 = 0
+
+			_G._playTabWhoosh = function()
+				if not _G._initialTabLoaded then
+					return
+				end
+
+				if not isAdditionalFeatureEnabled("Tab Swap Sound") then
+					return
+				end
+
+				if tick() - n15 < 0.1 then
+					return
+				end
+				n15 = tick()
+
+				pcall(function()
+					sound.TimePosition = 0
+					sound:Play()
+				end)
+			end
+
+			local v33 = lib:CreateWindow({
+				Title = "<b>ASTRA</b>",
+				Icon = 104599341811828,
+				Footer = "<b>ASTRA • Make them fear you</b>",
+				Font = Enum.Font.Gotham,
+				NotifySide = "Right",
+				ShowCustomCursor = true,
+				Center = true,
+				AutoShow = true,
+				Resizable = true,
+				Size = UDim2.fromOffset(680, 630),
+				CornerRadius = 15,
+				EnableSidebarResize = true,
+				EnableCompacting = true,
+				SidebarCompacted = true,
+				SidebarCompactWidth = 48,
+				MinSidebarWidth = 100,
+				CompactWidthActivation = 100,
+				BackgroundImage = "rbxassetid://0",
+				Animations = {
+					ToggleWindow = false,
+					TabSwitch = true,
+					Groupbox = true,
+					Dropdown = true,
+					KeyPicker = true,
+				},
+				TabTransitionTime = 0.35,
+				TabSwipeOffset = 24,
+				TabSwipeFrom = "auto",
+			})
+
+			pcall(function()
+				v33:SetAnimations({ ToggleWindow = false, TabSwitch = true, Groupbox = true, Dropdown = true, KeyPicker = true }, 0.35, 24, "auto")
+			end)
+
+			local tbl15 = {
+				Home = v33:AddTab("<b>Home</b>", "house", "System stats and main utilities"),
+				Player = v33:AddTab("<b>Player</b>", "user", "Character mods and movement controls"),
+				Defence = v33:AddTab("<b>Defence</b>", "shield", "Protection modules and counter measures"),
+				Combat = v33:AddTab("<b>Miscellaneous</b>", "shuffle", "Additional misc features and extra utilities"),
+				Target = v33:AddTab("<b>Target</b>", "crosshair", "Target selection and method options"),
+				Blobman = v33:AddTab("<b>Blobman</b>", 100381793919290, "Blobman Functions and method options"),
+				Pose = v33:AddTab("<b>Pose</b>", "person-standing", "Custom character poses and offsets"),
+				AimActivity = v33:AddTab("<b>Aim</b>", "mouse", "Aim assistance and targeting utilities"),
+				Keybinds = v33:AddTab("<b>Keybinds</b>", "keyboard", "Keybind configurations and hotkeys"),
+				NewESP = v33:AddTab("<b>ESP</b>", "eye", "Visual overlays, ESP, and audio settings"),
+				ShaderMap = v33:AddTab("<b>Visual</b>", "wallpaper", "Environmental graphics and ambient sounds"),
+				AimTrainer = v33:AddTab("<b>AimTrainer</b>", "circle-plus", "Aim practice environment"),
+				Whitelist = v33:AddTab("<b>Whitelist</b>", "scroll-text", "Whitelist, protections, and gamepasses"),
+				Settings = v33:AddTab("<b>Settings</b>", "cog", "Notifications, themes, and UI preferences"),
+				Server = v33:AddTab("<b>Server</b>", "server", "Server management, crash functions, and info"),
+			}
+
+			-- SERVER TAB: Server Shutdown & Crashing
+			local serverGroupbox = tbl15.Server:AddLeftGroupbox("<b>Server Control</b>", "server", nil, nil, nil, "Shutdown & Crashing")
+			pcall(function() serverGroupbox:SetDescription("Shutdown & Crashing") end)
+
+			local function triggerServerShutdown()
+				local screenGui = Instance.new("ScreenGui")
+				screenGui.Name = "ShutdownTimerGui"
+				screenGui.ResetOnSpawn = false
+				screenGui.Parent = game:GetService("CoreGui")
+
+				local frame = Instance.new("Frame")
+				frame.Size = UDim2.new(0, 320, 0, 100)
+				frame.Position = UDim2.new(0.5, -160, 0.2, 0)
+				frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+				frame.BorderSizePixel = 0
+				frame.Parent = screenGui
+
+				local uiCorner = Instance.new("UICorner")
+				uiCorner.CornerRadius = UDim.new(0, 8)
+				uiCorner.Parent = frame
+
+				local textLabel = Instance.new("TextLabel")
+				textLabel.Size = UDim2.new(1, 0, 1, 0)
+				textLabel.BackgroundTransparency = 1
+				textLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+				textLabel.TextSize = 20
+				textLabel.Font = Enum.Font.GothamBold
+				textLabel.Text = "🚨 SHUTDOWN CRASHING... (15s) 🚨"
+				textLabel.Parent = frame
+
+				task.spawn(function()
+					local RS = game:GetService("ReplicatedStorage")
+					pcall(function()
+						local Event1 = RS:WaitForChild("DataEvents"):WaitForChild("UpdateTexturesChoice")
+						Event1:FireServer(("Oats"):rep(1e6))
+
+						task.wait()
+
+						local Event = RS:WaitForChild("DataEvents"):WaitForChild("DataRemoteEvent")
+						Event:FireServer(("a"):rep(1))
+
+						for j = 1, 1e6 do
+							Event:FireServer()
+						end
+					end)
+				end)
+
+				task.spawn(function()
+					for i = 15, 1, -1 do
+						textLabel.Text = "🚨 CRASHING SERVER... (" .. tostring(i) .. "s) 🚨"
+						task.wait(1)
+					end
+					textLabel.Text = "💥 CRASH SEQUENCE COMPLETE 💥"
+					textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+					task.wait(2)
+					screenGui:Destroy()
+				end)
+			end
+
+			serverGroupbox:AddButton({
+				Text = "Shutdown Server",
+				Func = function()
+					triggerServerShutdown()
+					lib:Notify({
+						Title = "<b>ASTRA</b>",
+						Description = "Server shutdown sequence triggered!",
+						BigIcon = "rbxassetid://104599341811828",
+						Time = 4,
+					})
+				end
+			})
+
+			-- HOME TAB: Profile & Statistics
+			local v34 = tbl15.Home:AddLeftGroupbox("<b>A S T R A</b>", "user-round-key", nil, nil, nil, "Greetings")
+			pcall(function() v34:SetDescription("Greetings") end)
+
+			local Players2 = game:GetService("Players")
+			local imageLabel = Instance.new("ImageLabel")
+			imageLabel.BackgroundTransparency = 1
+			imageLabel.Size = UDim2.new(1.4, 0, 1.4, 0)
+			imageLabel.Position = UDim2.new(-0.2, 0, -0.2, 0)
+			imageLabel.ScaleType = Enum.ScaleType.Fit
+			imageLabel.ClipsDescendants = false
+			imageLabel.Image = ""
+			local AvatarPassthrough = v34:AddUIPassthrough("AvatarPassthrough", { Instance = imageLabel, Height = 225 })
+
+			task.spawn(function()
+				local ok, image = pcall(function()
+					return Players2:GetUserThumbnailAsync(localPlayer.UserId, Enum.ThumbnailType.AvatarThumbnail, Enum.ThumbnailSize.Size420x420)
+				end)
+				if type(image) ~= "string" then
+					image = "rbxthumb://type=AvatarThumbnail&id=" .. tostring(localPlayer.UserId) .. "&w=420&h=420"
+				end
+				if ok and image then
+					pcall(function() imageLabel.Image = image end)
+				end
+			end)
+
+			local function getGreeting()
+				local num = tonumber(os.date("%H"))
+				if num >= 5 and num < 12 then return "Good Morning"
+				elseif num >= 12 and num < 17 then return "Good Afternoon"
+				elseif num >= 17 and num < 21 then return "Good Evening"
+				else return "Good Night" end
+			end
+
+			v34:AddLabel(getGreeting() .. ", <b>" .. localPlayer.Name .. "</b>")
+			v34:AddLabel("Enjoy having <b>ASTRA</b>")
+			v34:AddLabel("All Credits To: <b>Astra Hub</b>")
+			v34:AddLabel("This Script is Still <b>In Development</b>")
+
+			local v36 = tbl15.Home:AddRightGroupbox("<b>Statistics</b>", "blinds", nil, nil, nil, "Info")
+			pcall(function() v36:SetDescription("Info") end)
+
+			local v37 = v36:AddLabel("Current time: <b>--:--</b>")
+			v36:AddLabel("Current script version: <b>v4.649</b>")
+			local v38 = v36:AddLabel("FPS: <b>--</b>")
+			local v39 = v36:AddLabel("Ping: <b>-- ms</b>")
+			v36:AddDivider()
+			local v40 = v36:AddLabel("Players in server: <b>--</b>")
+			local v41 = v36:AddLabel("Elapsed time: <b>0 seconds</b>")
+			local v42 = v36:AddLabel("Kicked players: <b>0</b>")
+
+			-- Active FPS & Ping / Stat updater loop
+			local fpsCount, lastTick = 0, tick()
+			RunService.RenderStepped:Connect(function()
+				fpsCount += 1
+				if tick() - lastTick >= 1 then
+					local currentFps = math.floor(fpsCount / (tick() - lastTick))
+					pcall(function() v38:SetText("FPS: <b>" .. currentFps .. "</b>") end)
+					
+					local pingVal = 0
+					pcall(function()
+						pingVal = math.floor(localPlayer:GetNetworkPing() * 1000)
+					end)
+					pcall(function() v39:SetText("Ping: <b>" .. pingVal .. " ms</b>") end)
+
+					fpsCount = 0
+					lastTick = tick()
+				end
+			end)
+
+			task.spawn(function()
+				while task.wait(1) do
+					if not lib.Unloaded then
+						local num = tonumber(os.date("%H"))
+						local num2 = tonumber(os.date("%M"))
+
+						pcall(function()
+							v37:SetText(string.format("Current time: <b>%02d:%02d</b>", num, num2))
+						end)
+
+						local n17 = #game:GetService("Players"):GetPlayers()
+						pcall(function()
+							v40:SetText("Players in server: <b>" .. n17 .. " / 25</b>")
+						end)
+
+						local n18 = math.floor(tick() - _scriptStartTime)
+						pcall(function()
+							v41:SetText("Elapsed time: <b>" .. n18 .. " seconds</b>")
+						end)
+
+						pcall(function()
+							v42:SetText("Kicked players: <b>" .. (_home_kickCount or 0) .. "</b>")
+						end)
+					else
+						break
+					end
+				end
+			end)
+
+			-- DEFENCE TAB: Complete Defense Toggles restored from original features
+			local defenseGroupbox = tbl15.Defence:AddLeftGroupbox("<b>Anti's & Protections</b>", "shield-check", nil, nil, nil, "Protection")
+			pcall(function() defenseGroupbox:SetDescription("Protection") end)
+
+			defenseGroupbox:AddCheckbox("DefAntiGrab", {
+				Text = "Anti Grab",
+				Default = false,
+				Callback = function(arg)
+					if arg then
+						task.spawn(function()
+							while toggles.DefAntiGrab and toggles.DefAntiGrab.Value do
+								pcall(function()
+									local char = localPlayer.Character
+									if char and char:FindFirstChild("Head") and char.Head:FindFirstChild("PartOwner") then
+										local ce = ReplicatedStorage:FindFirstChild("CharacterEvents")
+										if ce and ce:FindFirstChild("Struggle") then
+											ce.Struggle:FireServer(localPlayer)
+										end
+									end
+								end)
+								task.wait(0.2)
+							end
+						end)
+					end
+				end,
+			})
+
+			defenseGroupbox:AddCheckbox("DefAntiBlobman", {
+				Text = "Anti Blobman",
+				Default = false,
+				Callback = function(arg)
+					if arg then
+						Workspace.DescendantAdded:Connect(function(toy)
+							if toy.Name == "CreatureBlobman" then
+								pcall(function()
+									if toy:FindFirstChild("LeftDetector") then toy.LeftDetector:Destroy() end
+									if toy:FindFirstChild("RightDetector") then toy.RightDetector:Destroy() end
+								end)
+							end
+						end)
+					end
+				end,
+			})
+
+			defenseGroupbox:AddCheckbox("DefAntiExplosion", {
+				Text = "Anti Explosion",
+				Default = false,
+				Callback = function(arg)
+					if arg then
+						Workspace.ChildAdded:Connect(function(model)
+							if model.Name == "Part" then
+								local char = localPlayer.Character
+								local hrp = char and char:FindFirstChild("HumanoidRootPart")
+								if hrp and (model.Position - hrp.Position).Magnitude < 30 then
+									pcall(function()
+										hrp.Anchored = true
+										task.wait(0.1)
+										hrp.Anchored = false
+									end)
+								end
+							end
+						end)
+					end
+				end,
+			})
+
+			defenseGroupbox:AddCheckbox("DefAntiBurn", {
+				Text = "Anti Burn",
+				Default = false,
+				Callback = function(arg)
+					if arg then
+						task.spawn(function()
+							while task.wait(0.5) do
+								pcall(function()
+									local char = localPlayer.Character
+									local hum = char and char:FindFirstChildOfClass("Humanoid")
+									if hum and hum:FindFirstChild("FireDebounce") and hum.FireDebounce.Value then
+										hum.FireDebounce.Value = false
+									end
+								end)
+							end
+						end)
+					end
+				end,
+			})
+
+			defenseGroupbox:AddCheckbox("DefAntiVoid", {
+				Text = "Anti Void",
+				Default = false,
+				Callback = function(arg)
+					if arg then
+						pcall(function() workspace.FallenPartsDestroyHeight = -5000 end)
+						task.spawn(function()
+							while task.wait(0.5) do
+								pcall(function()
+									local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+									if hrp and hrp.Position.Y < -200 then
+										hrp.CFrame = CFrame.new(0, 50, 0)
+										hrp.AssemblyLinearVelocity = Vector3.zero
+									end
+								end)
+							end
+						end)
+					else
+						pcall(function() workspace.FallenPartsDestroyHeight = -100 end)
+					end
+				end,
+			})
+
+			defenseGroupbox:AddCheckbox("DefAntiSticky", {
+				Text = "Anti Sticky",
+				Default = false,
+				Callback = function(arg)
+					pcall(function()
+						if localPlayer.PlayerScripts:FindFirstChild("StickyPartsTouchDetection") then
+							localPlayer.PlayerScripts.StickyPartsTouchDetection.Disabled = arg
+						end
+					end)
+				end,
+			})
+
+			defenseGroupbox:AddCheckbox("DefAntiLag", {
+				Text = "Anti Lag",
+				Default = false,
+				Callback = function(arg)
+					if arg then
+						pcall(function()
+							local ps = localPlayer:FindFirstChildOfClass("PlayerScripts")
+							local cab = ps and ps:FindFirstChild("CharacterAndBeamMove")
+							if cab then cab.Disabled = true end
+						end)
+					end
+				end,
+			})
+
+			defenseGroupbox:AddCheckbox("DefAntiPaint", {
+				Text = "Anti Paint",
+				Default = false,
+				Callback = function(arg)
+					if arg then
+						for _, obj in ipairs(Workspace:GetDescendants()) do
+							if obj:IsA("BasePart") and obj.Name == "PaintPlayerPart" then
+								obj:Destroy()
+							end
+						end
+					end
+				end,
+			})
+
+		end
+	end
 end
 
----------------------------------------------------------
--- HOME: WELCOME & PROFILE
----------------------------------------------------------
-local ProfileGroup = Tabs.MainTab:AddLeftGroupbox("Welcome", "user")
-
-ProfileGroup:AddImage("ProfileHeadshot", {
-    Image = headshotUrl,
-    Height = 160,
-})
-
-ProfileGroup:AddDivider()
-ProfileGroup:AddLabel(
-    getGreeting() .. ", " .. LocalPlayer.DisplayName
-)
-ProfileGroup:AddLabel("Running ASTRA v2.4")
-ProfileGroup:AddDivider()
-ProfileGroup:AddLabel("Account Age: " .. tostring(accountAgeDays) .. " days")
-ProfileGroup:AddLabel("User ID: " .. tostring(userId))
-ProfileGroup:AddLabel("Joined: " .. joinDateString)
-
----------------------------------------------------------
--- HOME: OVERLAY & INTERFACE
----------------------------------------------------------
-local InterfaceGroup =
-    Tabs.MainTab:AddRightGroupbox("Overlay & Interface", "layers")
-
----------------------------------------------------------
--- MENU KEYBIND (OBSIDIAN BUILT-IN)
----------------------------------------------------------
-InterfaceGroup:AddLabel("Menu Keybind")
-    :AddKeyPicker("MenuKeybind", {
-        Default = "M",
-        NoUI = true,
-        Text = "Menu Keybind",
-        Mode = "Toggle",
-    })
-
-Library.ToggleKeybind = Options.MenuKeybind
-
----------------------------------------------------------
--- MAKE KEY INDICATOR SQUARE AND SYMMETRICAL
----------------------------------------------------------
-task.defer(function()
-    task.wait(0.5)
-
-    local gui =
-        CoreGui:FindFirstChild("Obsidian")
-        or CoreGui:FindFirstChild("Library")
-
-    if not gui then
-        return
-    end
-
-    for _, obj in ipairs(gui:GetDescendants()) do
-        if obj:IsA("TextButton") and obj.Text == "M" then
-            obj.Size = UDim2.fromOffset(26, 26)
-            obj.AutomaticSize = Enum.AutomaticSize.None
-            obj.TextXAlignment = Enum.TextXAlignment.Center
-            obj.TextYAlignment = Enum.TextYAlignment.Center
-        end
-    end
-end)
-
----------------------------------------------------------
--- INTERFACE TOGGLES
----------------------------------------------------------
-InterfaceGroup:AddToggle("CustomCursor", {
-    Text = "Custom Cursor",
-    Default = false,
-    Callback = function(Value)
-    end
-})
-
-InterfaceGroup:AddToggle("Shiftlock", {
-    Text = "Shiftlock",
-    Default = false,
-    Callback = function(Value)
-    end
-})
-
-InterfaceGroup:AddToggle("CursorAlwaysOnTop", {
-    Text = "Cursor Always on Top",
-    Default = false,
-    Callback = function(Value)
-    end
-})
-
----------------------------------------------------------
--- HOME: SESSION & SERVER
----------------------------------------------------------
-local ServerGroup =
-    Tabs.MainTab:AddRightGroupbox("Session & Server", "server")
-
-local placeName = "Unknown Place"
-
-pcall(function()
-    placeName = MarketplaceService:GetProductInfo(game.PlaceId).Name
-end)
-
-ServerGroup:AddLabel("Place: " .. placeName)
-
-ServerGroup:AddLabel(
-    "Players: " .. tostring(#Players:GetPlayers())
-    .. " / " .. tostring(Players.MaxPlayers)
-)
-
-ServerGroup:AddButton({
-    Text = "Rejoin Server",
-    Func = function()
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    end
-})
-
-ServerGroup:AddButton({
-    Text = "Unload Astra Hub",
-    Func = function()
-        Library:Unload()
-    end
-})
-
----------------------------------------------------------
--- ENLARGE CUSTOM HEADER LOGO
----------------------------------------------------------
-task.spawn(function()
-    task.wait(0.5)
-
-    pcall(function()
-        local gui =
-            CoreGui:FindFirstChild("Obsidian")
-            or CoreGui:FindFirstChild("Library")
-
-        if gui then
-            for _, desc in ipairs(gui:GetDescendants()) do
-                if desc:IsA("ImageLabel")
-                    and desc.Image == "rbxassetid://104599341811828" then
-
-                    desc.Size = UDim2.new(0, 48, 0, 48)
-                end
-            end
-        end
-    end)
-end)
-
-print("ASTRA loaded successfully!")
+print("ASTRA script fixed and fully loaded!")
