@@ -8,13 +8,15 @@ cloneref = cloneref or function(o) return o end
 clonefunction = clonefunction or function(f) return f end
 -- =======================================
 
+local Library -- shared reference for NotificationCenter & hooks
+
 if true then
 	local n13 = 0
 
 	getgenv()._NOTIFICATION_CENTER = {
 		enabled = true,
-		SendNotif = function(arg, arg2, arg3, arg4, arg5, soundId, volume, arg6)
-			if not arg.enabled then
+		SendNotif = function(self, arg2, arg3, arg4, arg5, soundId, volume, arg6)
+			if not self.enabled then
 				return false
 			end
 			n13 += 1
@@ -63,7 +65,15 @@ if true then
 	}
 
 	if getgenv()._SCRIPT_LOADED then
-		getgenv()._NOTIFICATION_CENTER:SendNotif("ASTRA", "Already loaded! Unload the current script to run it again.", "rbxassetid://104599341811828", 3, "rbxassetid://97643101798871", 0.8, 1)
+		getgenv()._NOTIFICATION_CENTER:SendNotif(
+			"ASTRA",
+			"Already loaded! Unload the current script to run it again.",
+			"rbxassetid://104599341811828",
+			3,
+			"rbxassetid://97643101798871",
+			0.8,
+			1
+		)
 		return
 	end
 	getgenv()._SCRIPT_LOADED = true
@@ -302,6 +312,7 @@ if true then
 		end)
 
 		local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
+		Library = lib
 		lib.CornerRadius = 15
 		lib.Scheme.BackgroundColor = Color3.fromHex(defaultColors.BackgroundColor)
 		lib.Scheme.MainColor = Color3.fromHex(defaultColors.MainColor)
@@ -695,7 +706,7 @@ if true then
 					table.insert(tbl9.tweens, tween2)
 					local connection = nil
 
-					connection = tween.Completed:Connect(function()
+					connection = tween2.Completed:Connect(function()
 						if connection then
 							connection:Disconnect()
 						end
@@ -1780,17 +1791,13 @@ if true then
 							end)
 						end
 
-						local character = localPlayer2.Character
+						local character = localPlayer2.Character or localPlayer2.CharacterAdded:Wait()
 
 						if character then
 							local humanoid = character:FindFirstChild("Humanoid")
 							local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 
 							task.spawn(function()
-								if not character then
-									character = localPlayer2.Character or localPlayer2.CharacterAdded:Wait()
-								end
-
 								humanoid = character:WaitForChild("Humanoid", 10)
 								humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10)
 							end)
@@ -1807,7 +1814,6 @@ if true then
 							lib.CornerRadius = 15
 							lib.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
 
-							-- Set ASTRA Window with the provided Logo (rbxassetid://104599341811828)
 							local v33 = lib:CreateWindow({
 								Title = "<b>ASTRA</b>",
 								Icon = 104599341811828,
@@ -1871,7 +1877,6 @@ if true then
 								_applyCornerRadius(15)
 							end
 
-							-- Astra Tab Definitions including Server Tab
 							local tbl15 = {
 								Home = v33:AddTab("<b>Home</b>", "house", "System stats and main utilities"),
 								Player = v33:AddTab("<b>Player</b>", "user", "Character mods and movement controls"),
@@ -1890,7 +1895,7 @@ if true then
 								Server = v33:AddTab("<b>Server</b>", "server", "Server management, crash functions, and info"),
 							}
 
-							-- SERVER TAB: Add Server Shutdown feature
+							-- SERVER TAB: Server Shutdown feature
 							local serverGroupbox = tbl15.Server:AddLeftGroupbox("<b>Server Control</b>", "server", nil, nil, nil, "Shutdown & Crashing")
 							pcall(function() serverGroupbox:SetDescription("Shutdown & Crashing") end)
 
@@ -1959,7 +1964,7 @@ if true then
 										BigIcon = "rbxassetid://104599341811828",
 										Time = 4,
 									})
-								end
+								end,
 							})
 
 							_G._FTAP_WhitelistEnabled = true
@@ -2488,3 +2493,6 @@ if true then
 end
 
 print("ASTRA script successfully compiled and loaded with server shutdown and new logo!")
+```[cite: 3]
+
+Would you like to add groupboxes or controls to any of the other tabs (`Player`, `Defence`, `Target`, `Blobman`, etc.), or merge any specific pieces from the earlier `Kozmoz` UI code into this window?
