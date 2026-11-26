@@ -1,677 +1,913 @@
---[================================================================================]--
--- ASTRA v4.649 (Obsidian UI + Defence Tab + Server Shutdown)
---[================================================================================]--
+-- Spider (adapted from Spider Code for Ftap.txt for Astra Toys tab)
+do
+	local Players = game:GetService("Players")
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local RunService = game:GetService("RunService")
+	local Workspace = game:GetService("Workspace")
 
--- ===== compat shims =====
-queue_on_teleport = queue_on_teleport or function() end
-cloneref = cloneref or function(o) return o end
-clonefunction = clonefunction or function(f) return f end
--- =======================================
+	local LP = localPlayer or Players.LocalPlayer
+	local toysGroup = tabs.Toys:AddLeftGroupbox("<b>Spider</b>", "bug")
 
-if game.PlaceId ~= 6961824067 then
-	game:GetService("Players").LocalPlayer:Kick("ASTRA SCRIPT")
-	return
-end
+	local state = {
+		enabled = false,
+		generation = 0,
+		working = false,
+		toys = {},
+		attachments = {},
+		touchConnections = {},
+		recoveryTimes = {},
+		collisions = {},
+		colors = {},
+		conn = nil,
+		hum = nil,
+		seat = nil,
+		controls = nil,
+		nextControlsScan = nil,
+	}
 
-if getgenv()._SCRIPT_LOADED then
-	warn("ASTRA is already loaded! Unload the current script to run it again.")
-	return
-end
-getgenv()._SCRIPT_LOADED = true
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-local TeleportService = game:GetService("TeleportService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local SoundService = game:GetService("SoundService")
-local CoreGui = game:GetService("CoreGui")
-local TextService = game:GetService("TextService")
-local Debris = game:GetService("Debris")
-
-local localPlayer = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() and Players.LocalPlayer
-local localPlayer2 = localPlayer
-
-local defaultColors = {
-	MainColor = "121212",
-	FontFace = "Gotham",
-	AccentColor = "007aff",
-	OutlineColor = "252528",
-	BackgroundColor = "0c0c0c",
-	FontColor = "c1cdcd",
-}
-getgenv()._DEFAULT_COLORS = defaultColors
-
-local Library
-local n13 = 0
-
-getgenv()._NOTIFICATION_CENTER = {
-	enabled = true,
-	SendNotif = function(self, title, desc, icon, duration, soundId, volume, soundLifetime)
-		if not self.enabled then
-			return false
-		end
-		n13 += 1
-		local notifId = "NC_" .. n13
-
-		if soundId then
+	local function notifySpider(title, desc)
+		if typeof(notify) == "function" then
+			pcall(notify, title, desc)
+		elseif lib and lib.Notify then
 			pcall(function()
-				local sound = Instance.new("Sound")
-				sound.SoundId = soundId
-				sound.Volume = volume or 1.5
-				sound.RollOffMaxDistance = 0
-				sound.Parent = workspace
-				sound:Play()
-				Debris:AddItem(sound, soundLifetime or 2)
-			end)
-		end
-
-		if Library and Library.Notify then
-			pcall(function()
-				_G._suppressNextNotifSound = true
-				Library:Notify({
-					Title = title or "Notification",
-					Description = desc or "No description",
-					BigIcon = icon or "rbxassetid://104599341811828",
-					Time = duration or 2.5,
+				lib:Notify({
+					Title = "<b>" .. tostring(title) .. "</b>",
+					Description = tostring(desc),
+					BigIcon = "rbxassetid://104599341811828",
+					Time = 3,
 				})
-				_G._suppressNextNotifSound = true
+			end)
+		end
+	end
+
+	local function active(gen)
+		return state.enabled and gen == state.generation and not (lib and lib.Unloaded)
+	end
+
+	local function disconnect(conn)
+		if conn then
+			pcall(function()
+				conn:Disconnect()
+			end)
+		end
+	end
+
+	local function destroyToy(toy)
+		local menu = ReplicatedStorage:FindFirstChild("MenuToys")
+		local remote = menu and menu:FindFirstChild("DestroyToy")
+		if remote and toy and toy.Parent then
+			pcall(function()
+				remote:FireServer(toy)
+			end)
+		end
+	end
+
+	local function cleanup()
+		disconnect(state.conn)
+		state.conn = nil
+
+		for _, conn in ipairs(state.touchConnections) do
+			disconnect(conn)
+		end
+		state.touchConnections = {}
+		state.recoveryTimes = {}
+
+		for _, obj in ipairs(state.attachments) do
+			pcall(function()
+				obj:Destroy()
+			end)
+		end
+		state.attachments = {}
+
+		for part, old in pairs(state.collisions) do
+			pcall(function()
+				if part and part.Parent and part.CanCollide == false then
+					part.CanCollide = old
+				end
+			end)
+		end
+		state.collisions = {}
+
+		for part, old in pairs(state.colors) do
+			pcall(function()
+				if part and part.Parent then
+					part.Color = old
+				end
+			end)
+		end
+		state.colors = {}
+
+		if state.hum and state.hum.Parent and state.seat and state.hum.SeatPart == state.seat then
+			pcall(function()
+				state.hum.Sit = false
 			end)
 		end
 
-		return notifId
-	end,
-}
+		state.seat = nil
+		state.hum = nil
+		state.controls = nil
+		state.nextControlsScan = nil
 
-task.spawn(function()
-	pcall(function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/7Savitar/Obsidian/refs/heads/main/infyield.txt"))()
-	end)
-end)
-
-task.spawn(function()
-	while true do
-		task.wait(60)
-		pcall(function()
-			collectgarbage("step", 200)
-		end)
-	end
-end)
-
--- ===== DESYNC SYSTEM =====
-local desync = {
-	enabled = false,
-	loc = CFrame.new(),
-	isOffsetted = false,
-	_requestActive = false,
-	_targetCFFunc = nil,
-	_requestTimeout = 5,
-	_requestStartTime = 0,
-	_spinConn = nil,
-	serverCF = nil,
-}
-
-local function startDesyncSpin()
-	if desync._spinConn then return end
-	desync._spinConn = RunService.Heartbeat:Connect(function()
-		local char = localPlayer.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		if hrp and desync.enabled then
-			hrp.AssemblyAngularVelocity = Vector3.new(0, 0.01, 0)
-		end
-	end)
-end
-
-local function stopDesyncSpin()
-	task.delay(5, function()
-		if desync._spinConn and not desync.enabled then
-			desync._spinConn:Disconnect()
-			desync._spinConn = nil
-		end
-	end)
-end
-
-function desync:GetServerCFrame()
-	local char = localPlayer.Character
-	local hrp = char and (char:FindFirstChild("saviHRP") or char:FindFirstChild("HumanoidRootPart"))
-	if not hrp then return nil end
-
-	if self.enabled then
-		if self._requestActive and self._targetCFFunc then
-			local ok, result = pcall(self._targetCFFunc)
-			if ok and typeof(result) == "CFrame" then
-				return result
-			end
-		end
-		if self.serverCF and typeof(self.serverCF) == "CFrame" then
-			return self.serverCF
+		local toys = state.toys
+		state.toys = {}
+		for _, toy in ipairs(toys) do
+			destroyToy(toy)
 		end
 	end
-	return hrp.CFrame
-end
 
-function desync:RequestDesync(targetCFFunc, requestTimeout)
-	if self._requestActive then return false end
-	self._requestActive = true
-	self._targetCFFunc = targetCFFunc
-	self._requestTimeout = requestTimeout or 5
-	self._requestStartTime = tick()
-
-	if not self.enabled then
-		self.enabled = true
-		startDesyncSpin()
-		local char = localPlayer.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			self.loc = hrp.CFrame
-			self.isOffsetted = false
-		end
-	end
-	return true
-end
-
-function desync:CancelRequest()
-	if not self._requestActive then return end
-	self._requestActive = false
-	self._targetCFFunc = nil
-	self.serverCF = nil
-	local char = localPlayer.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart")
-	if hrp and self.isOffsetted then
-		hrp.CFrame = self.loc
-	end
-	self.isOffsetted = false
-	self.enabled = false
-	stopDesyncSpin()
-end
-
-function desync:IsAvailable()
-	return not self._requestActive
-end
-
-RunService.Stepped:Connect(function()
-	if desync.enabled and desync.isOffsetted and localPlayer.Character then
-		local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if hrp and desync.loc then
-			hrp.CFrame = desync.loc
-			desync.isOffsetted = false
-		end
-	end
-end)
-
-RunService:BindToRenderStep("_GlobalDesyncCamFix", 0, function()
-	if desync.enabled and desync.isOffsetted and localPlayer.Character then
-		local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if hrp and desync.loc then
-			hrp.CFrame = desync.loc
-			desync.isOffsetted = false
-		end
-	end
-end)
-
-RunService.Heartbeat:Connect(function()
-	if not desync.enabled or not localPlayer.Character then return end
-	local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
-	if not hrp then return end
-	desync.loc = hrp.CFrame
-
-	if desync._requestActive and desync._requestStartTime then
-		if desync._requestTimeout <= tick() - desync._requestStartTime then
-			desync:CancelRequest()
+	local function stopWith(gen, text)
+		if gen ~= state.generation then
 			return
 		end
+		state.enabled = false
+		state.generation += 1
+		local stopped = state.generation
+		cleanup()
+		notifySpider("Spider", text)
+
+		task.defer(function()
+			local toggleObj = lib and lib.Toggles and lib.Toggles.AstraSpider
+			if state.generation == stopped and toggleObj and toggleObj.Value then
+				toggleObj:SetValue(false)
+			end
+		end)
 	end
 
-	if desync._requestActive and desync._targetCFFunc then
-		local ok, cf = pcall(desync._targetCFFunc)
-		if ok and typeof(cf) == "CFrame" then
-			hrp.CFrame = cf
-			desync.serverCF = cf
-			desync.isOffsetted = true
+	local function requestRecovery(part)
+		if not state.enabled or not part or not part.Parent then
+			return
+		end
+		local now = os.clock()
+		if now - (state.recoveryTimes[part] or -math.huge) < 0.5 then
+			return
+		end
+		state.recoveryTimes[part] = now
+
+		local folder = ReplicatedStorage:FindFirstChild("GrabEvents")
+		local remote = folder and folder:FindFirstChild("SetNetworkOwner")
+		if remote then
+			pcall(function()
+				remote:FireServer(part, part.CFrame)
+			end)
 		end
 	end
-end)
 
-localPlayer.CharacterAdded:Connect(function(char)
-	task.wait(0.1)
-	local hrp = char:WaitForChild("HumanoidRootPart", 10)
-	if hrp then
-		desync.loc = hrp.CFrame
-	end
-	desync.isOffsetted = false
-	desync.serverCF = nil
-	if desync._requestActive then
-		desync._requestActive = false
-		desync._targetCFFunc = nil
-		desync.enabled = false
-		stopDesyncSpin()
-	end
-end)
-
-getgenv()._DESYNC = desync
-
--- ===== OBSIDIAN LIBRARY SETUP =====
-local okLib, lib = pcall(function()
-	return loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
-end)
-
-if not okLib or type(lib) ~= "table" then
-	warn("ASTRA: Failed to load Obsidian Library:", tostring(lib))
-	return
-end
-
-Library = lib
-lib.CornerRadius = 15
-lib.Scheme.BackgroundColor = Color3.fromHex(defaultColors.BackgroundColor)
-lib.Scheme.MainColor = Color3.fromHex(defaultColors.MainColor)
-lib.Scheme.AccentColor = Color3.fromHex(defaultColors.AccentColor)
-lib.Scheme.OutlineColor = Color3.fromHex(defaultColors.OutlineColor)
-lib.Scheme.FontColor = Color3.fromHex(defaultColors.FontColor)
-lib.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
-
-local function applyCornerRadius(radius)
-	local r = tonumber(radius) or 15
-	lib.CornerRadius = r
-	if lib.ScreenGui then
-		for _, desc in ipairs(lib.ScreenGui:GetDescendants()) do
-			if desc:IsA("UICorner") and desc.CornerRadius.Scale == 0 then
-				desc.CornerRadius = UDim.new(0, r)
+	local function watchForPlayerTouch(toy, controlledPart, gen)
+		local descendants = toy:GetDescendants()
+		if toy:IsA("BasePart") then
+			descendants[#descendants + 1] = toy
+		end
+		for _, piece in ipairs(descendants) do
+			if piece:IsA("BasePart") then
+				pcall(function()
+					local conn = piece.Touched:Connect(function(hit)
+						if not active(gen) or not hit or not hit.Parent then
+							return
+						end
+						local current = hit
+						while current and current ~= Workspace do
+							local player = current:IsA("Model") and Players:GetPlayerFromCharacter(current)
+							if player then
+								if player ~= LP then
+									requestRecovery(controlledPart)
+								end
+								return
+							end
+							current = current.Parent
+						end
+					end)
+					state.touchConnections[#state.touchConnections + 1] = conn
+				end)
 			end
 		end
 	end
-	if _wmCorner then
-		_wmCorner.CornerRadius = UDim.new(0, r)
-	end
-end
-_applyCornerRadius = applyCornerRadius
 
-local origGetCustomIcon = lib.GetCustomIcon
-lib.GetCustomIcon = function(self, iconName, arg2)
-	local candidate = arg2 ~= nil and arg2 or iconName
-	if type(candidate) == "number" or tonumber(candidate) then
-		return {
-			Url = string.format("rbxthumb://type=Asset&id=%.0f&w=150&h=150", tonumber(candidate)),
-			ImageRectOffset = Vector2.zero,
-			ImageRectSize = Vector2.zero,
-			Custom = nil,
-		}
-	end
-	if type(origGetCustomIcon) == "function" then
-		return origGetCustomIcon(self, candidate)
-	end
-	return nil
-end
-
--- ===== THEME MANAGER =====
-local hasFs = type(isfolder) == "function" and type(makefolder) == "function" and type(isfile) == "function" and type(writefile) == "function" and type(readfile) == "function"
-local themeFields = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
-
-local obsidianThemeManager = {
-	Folder = "AstraLibSettings",
-	Library = lib,
-	AppliedToTab = false,
-	BuiltInThemes = {
-		Default = {
-			1,
-			{
-				FontColor = "c1cdcd",
-				MainColor = "121212",
-				AccentColor = "007aff",
-				BackgroundColor = "0c0c0c",
-				OutlineColor = "252528",
-			},
-		},
-		BBot = {
-			2,
-			{
-				FontColor = "ffffff",
-				MainColor = "1e1e1e",
-				AccentColor = "7e48a3",
-				BackgroundColor = "232323",
-				OutlineColor = "141414",
-			},
-		},
-	},
-}
-
-function obsidianThemeManager:SetLibrary(library)
-	self.Library = library
-end
-
-function obsidianThemeManager:GetPaths()
-	local paths = {}
-	local parts = self.Folder:split("/")
-	for i = 1, #parts do
-		paths[#paths + 1] = table.concat(parts, "/", 1, i)
-	end
-	paths[#paths + 1] = self.Folder .. "/themes"
-	return paths
-end
-
-function obsidianThemeManager:BuildFolderTree()
-	if not hasFs then return end
-	for _, path in ipairs(self:GetPaths()) do
-		if not isfolder(path) then
-			pcall(makefolder, path)
+	local function rootOf(toy)
+		if toy:IsA("BasePart") then
+			return toy
 		end
+		if not toy:IsA("Model") then
+			return nil
+		end
+		return toy:FindFirstChild("SoundPart", true) or toy.PrimaryPart or toy:FindFirstChildWhichIsA("BasePart", true)
 	end
-end
 
-function obsidianThemeManager:ApplyTheme(themeName)
-	local themeEntry = self.BuiltInThemes[themeName]
-	if not themeEntry then return end
-	local colors = themeEntry[2]
-	for k, v in pairs(colors) do
-		if k == "FontFace" then
-			pcall(function() self.Library:SetFont(Enum.Font[v]) end)
-			if self.Library.Options[k] then
-				pcall(function() self.Library.Options[k]:SetValue(v) end)
-			end
-		else
-			local col = Color3.fromHex(v)
-			self.Library.Scheme[k] = col
-			if self.Library.Options[k] then
-				pcall(function() self.Library.Options[k]:SetValueRGB(col) end)
-			end
+	local function looksLikeStair(name)
+		if type(name) ~= "string" then
+			return false
 		end
+		local low = name:lower()
+		return low:find("ladder", 1, true) ~= nil or low:find("stair", 1, true) ~= nil
 	end
-	self:ThemeUpdate()
-end
 
-function obsidianThemeManager:ThemeUpdate()
-	for _, field in ipairs(themeFields) do
-		if self.Library.Options and self.Library.Options[field] then
-			self.Library.Scheme[field] = self.Library.Options[field].Value
-		end
-	end
-	if self.Library.UpdateColorsUsingRegistry then
-		self.Library:UpdateColorsUsingRegistry()
-	end
-end
-
-obsidianThemeManager:BuildFolderTree()
-getgenv().ObsidianThemeManager = obsidianThemeManager
-
--- ===== CREATE OBSIDIAN WINDOW & TABS =====
-local window = lib:CreateWindow({
-	Title = "<b>ASTRA</b>",
-	Icon = 104599341811828,
-	Footer = "<b>ASTRA • Make them fear you</b>",
-	Font = Enum.Font.Gotham,
-	NotifySide = "Right",
-	ShowCustomCursor = true,
-	Center = true,
-	AutoShow = true,
-	Resizable = true,
-	Size = UDim2.fromOffset(680, 630),
-	CornerRadius = 15,
-	EnableSidebarResize = true,
-	EnableCompacting = true,
-	SidebarCompacted = true,
-	SidebarCompactWidth = 48,
-	MinSidebarWidth = 100,
-	CompactWidthActivation = 100,
-	BackgroundImage = "rbxassetid://0",
-})
-
-if lib.ScreenGui then
-	for _, desc in ipairs(lib.ScreenGui:GetDescendants()) do
-		if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-			desc.RichText = true
-		end
-	end
-	lib.ScreenGui.DescendantAdded:Connect(function(desc)
-		if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-			desc.RichText = true
-		end
-		if desc:IsA("UICorner") and desc.CornerRadius.Scale == 0 then
-			desc.CornerRadius = UDim.new(0, lib.CornerRadius or 15)
-		end
-	end)
-	applyCornerRadius(15)
-end
-
-local tabs = {
-	Home = window:AddTab("<b>Home</b>", "house", "System stats and main utilities"),
-	Player = window:AddTab("<b>Player</b>", "user", "Character mods and movement controls"),
-	Defence = window:AddTab("<b>Defence</b>", "shield", "Protection modules and counter measures"),
-	Combat = window:AddTab("<b>Miscellaneous</b>", "shuffle", "Additional misc features and extra utilities"),
-	Target = window:AddTab("<b>Target</b>", "crosshair", "Target selection and method options"),
-	Blobman = window:AddTab("<b>Blobman</b>", 100381793919290, "Blobman Functions and method options"),
-	Pose = window:AddTab("<b>Pose</b>", "person-standing", "Custom character poses and offsets"),
-	AimActivity = window:AddTab("<b>Aim</b>", "mouse", "Aim assistance and targeting utilities"),
-	Keybinds = window:AddTab("<b>Keybinds</b>", "keyboard", "Keybind configurations and hotkeys"),
-	NewESP = window:AddTab("<b>ESP</b>", "eye", "Visual overlays, ESP, and audio settings"),
-	ShaderMap = window:AddTab("<b>Visual</b>", "wallpaper", "Environmental graphics and ambient sounds"),
-	AimTrainer = window:AddTab("<b>AimTrainer</b>", "circle-plus", "Aim practice environment"),
-	Whitelist = window:AddTab("<b>Whitelist</b>", "scroll-text", "Whitelist, protections, and gamepasses"),
-	Settings = window:AddTab("<b>Settings</b>", "cog", "Notifications, themes, and UI preferences"),
-	Server = window:AddTab("<b>Server</b>", "server", "Server management, crash functions, and info"),
-}
-
--- ===== DEFENCE TAB (OBSIDIAN UI) =====
-local defenceLeft = tabs.Defence:AddLeftGroupbox("<b>Anti-Grab & Counter</b>", "shield")
-local defenceRight = tabs.Defence:AddRightGroupbox("<b>Desync & Safeguards</b>", "lock")
-
-getgenv()._DEFENCE_STATE = {
-	AntiGrab = false,
-	AutoBreakGrab = false,
-	AntiRagdoll = false,
-	DesyncToggle = false,
-}
-
-defenceLeft:AddToggle("DefenceAntiGrab", {
-	Text = "Anti Grab",
-	Default = false,
-	Callback = function(val)
-		getgenv()._DEFENCE_STATE.AntiGrab = val
-	end,
-})
-
-defenceLeft:AddToggle("DefenceAutoBreakGrab", {
-	Text = "Auto Break Grab",
-	Default = false,
-	Callback = function(val)
-		getgenv()._DEFENCE_STATE.AutoBreakGrab = val
-	end,
-})
-
-defenceLeft:AddToggle("DefenceAntiRagdoll", {
-	Text = "Anti Ragdoll",
-	Default = false,
-	Callback = function(val)
-		getgenv()._DEFENCE_STATE.AntiRagdoll = val
-	end,
-})
-
-defenceRight:AddToggle("DefenceDesync", {
-	Text = "Enable Desync",
-	Default = false,
-	Callback = function(val)
-		getgenv()._DEFENCE_STATE.DesyncToggle = val
-		if val then
-			desync:RequestDesync(function()
-				local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-				return hrp and (hrp.CFrame * CFrame.new(0, -12, 0)) or nil
-			end, 30)
-		else
-			desync:CancelRequest()
-		end
-	end,
-})
-
-defenceRight:AddButton({
-	Text = "Reset Desync",
-	Func = function()
-		desync:CancelRequest()
-		lib:Notify({
-			Title = "<b>ASTRA</b>",
-			Description = "Desync state reset.",
-			BigIcon = "rbxassetid://104599341811828",
-			Time = 2.5,
-		})
-	end,
-})
-
--- ===== SERVER TAB: SERVER SHUTDOWN =====
-local serverGroupbox = tabs.Server:AddLeftGroupbox("<b>Server Control</b>", "server")
-
-local function triggerServerShutdown()
-	local screenGui = Instance.new("ScreenGui")
-	screenGui.Name = "ShutdownTimerGui"
-	screenGui.ResetOnSpawn = false
-	screenGui.Parent = CoreGui
-
-	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0, 320, 0, 100)
-	frame.Position = UDim2.new(0.5, -160, 0.2, 0)
-	frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-	frame.BorderSizePixel = 0
-	frame.Parent = screenGui
-
-	local uiCorner = Instance.new("UICorner")
-	uiCorner.CornerRadius = UDim.new(0, 8)
-	uiCorner.Parent = frame
-
-	local textLabel = Instance.new("TextLabel")
-	textLabel.Size = UDim2.new(1, 0, 1, 0)
-	textLabel.BackgroundTransparency = 1
-	textLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
-	textLabel.TextSize = 20
-	textLabel.Font = Enum.Font.GothamBold
-	textLabel.Text = "SHUTDOWN CRASHING... (15s)"
-	textLabel.Parent = frame
-
-	task.spawn(function()
-		pcall(function()
-			local dataEvents = ReplicatedStorage:WaitForChild("DataEvents", 10)
-			if dataEvents then
-				local texEvent = dataEvents:FindFirstChild("UpdateTexturesChoice")
-				if texEvent then
-					texEvent:FireServer(("Oats"):rep(1e6))
+	local function findStairName()
+		local inv = Workspace:FindFirstChild(LP.Name .. "SpawnedInToys")
+		if inv then
+			for _, obj in ipairs(inv:GetChildren()) do
+				if looksLikeStair(obj.Name) and (obj:IsA("Model") or obj:IsA("BasePart")) then
+					return obj.Name
 				end
-				task.wait()
-				local dataRemote = dataEvents:FindFirstChild("DataRemoteEvent")
-				if dataRemote then
-					dataRemote:FireServer("a")
-					for _ = 1, 1e6 do
-						dataRemote:FireServer()
+			end
+		end
+
+		local best, bestScore
+		local function consider(name, score)
+			if not looksLikeStair(name) or #name > 80 then
+				return
+			end
+			local low = name:lower()
+			score = score + (low:find("light", 1, true) and 3 or 0) + (low:find("wood", 1, true) and 2 or 0)
+			if not best or score > bestScore then
+				best, bestScore = name, score
+			end
+		end
+
+		for _, container in ipairs({ LP, ReplicatedStorage }) do
+			for _, obj in ipairs(container:GetDescendants()) do
+				if obj:IsA("StringValue") then
+					local k = obj.Name:lower()
+					if k:find("toy", 1, true) or k:find("item", 1, true) or k:find("id", 1, true) then
+						consider(obj.Value, container == LP and 10 or 4)
+					end
+				elseif container == ReplicatedStorage and (obj:IsA("Model") or obj:IsA("Tool")) then
+					consider(obj.Name, 2)
+				end
+				local ok, attrs = pcall(function()
+					return obj:GetAttributes()
+				end)
+				if ok then
+					for k, v in pairs(attrs) do
+						local low = k:lower()
+						if low:find("toy", 1, true) or low:find("item", 1, true) then
+							consider(v, container == LP and 12 or 5)
+						end
 					end
 				end
 			end
-		end)
-	end)
-
-	task.spawn(function()
-		for i = 15, 1, -1 do
-			textLabel.Text = "CRASHING SERVER... (" .. tostring(i) .. "s)"
-			task.wait(1)
 		end
-		textLabel.Text = "CRASH SEQUENCE COMPLETE"
-		textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-		task.wait(2)
-		screenGui:Destroy()
-	end)
-end
-
-serverGroupbox:AddButton({
-	Text = "Shutdown Server",
-	Func = function()
-		triggerServerShutdown()
-		lib:Notify({
-			Title = "<b>ASTRA</b>",
-			Description = "Server shutdown sequence triggered!",
-			BigIcon = "rbxassetid://104599341811828",
-			Time = 4,
-		})
-	end,
-})
-
--- ===== HOME TAB =====
-local homeLeft = tabs.Home:AddLeftGroupbox("<b>A S T R A</b>", "user-round-key")
-local homeRightStats = tabs.Home:AddRightGroupbox("<b>Statistics</b>", "blinds")
-local homeRightScript = tabs.Home:AddRightGroupbox("<b>Script</b>", "code-xml")
-
-local function getGreeting()
-	local hour = tonumber(os.date("%H")) or 12
-	if hour >= 5 and hour < 12 then return "Good Morning" end
-	if hour >= 12 and hour < 17 then return "Good Afternoon" end
-	if hour >= 17 and hour < 21 then return "Good Evening" end
-	return "Good Night"
-end
-
-homeLeft:AddLabel(getGreeting() .. ", <b>" .. localPlayer.Name .. "</b>")
-homeLeft:AddLabel("Enjoy having <b>ASTRA</b>")
-homeLeft:AddLabel("All Credits To: <b>Astra Hub</b>")
-homeLeft:AddLabel("This Script is Still <b>In Development</b>")
-
-local lblTime = homeRightStats:AddLabel("Current time: <b>--:--</b>")
-homeRightStats:AddLabel("Current script version: <b>v4.649</b>")
-local lblFPS = homeRightStats:AddLabel("FPS: <b>--</b>")
-local lblPing = homeRightStats:AddLabel("Ping: <b>-- ms</b>")
-getgenv()._HomeLblFPS = lblFPS
-getgenv()._HomeLblPing = lblPing
-homeRightStats:AddDivider()
-local lblPlayers = homeRightStats:AddLabel("Players in server: <b>--</b>")
-local lblElapsed = homeRightStats:AddLabel("Elapsed time: <b>0 seconds</b>")
-local lblKicked = homeRightStats:AddLabel("Kicked players: <b>0</b>")
-
-local scriptStartTime = tick()
-local homeKickCount = 0
-
-task.spawn(function()
-	while task.wait(1) do
-		if lib.Unloaded then break end
-		local h = tonumber(os.date("%H")) or 0
-		local m = tonumber(os.date("%M")) or 0
-		pcall(function()
-			lblTime:SetText(string.format("Current time: <b>%02d:%02d</b>", h, m))
-			lblPlayers:SetText("Players in server: <b>" .. #Players:GetPlayers() .. " / 25</b>")
-			lblElapsed:SetText("Elapsed time: <b>" .. math.floor(tick() - scriptStartTime) .. " seconds</b>")
-			lblKicked:SetText("Kicked players: <b>" .. homeKickCount .. "</b>")
-		end)
+		return best
 	end
-end)
 
-homeRightScript:AddButton({
-	Text = "Unload Script",
-	Func = function()
-		getgenv()._SCRIPT_LOADED = false
-		desync:CancelRequest()
-		pcall(function() lib:Unload() end)
-	end,
-})
+	local function waitManualStair(gen)
+		local inv = Workspace:FindFirstChild(LP.Name .. "SpawnedInToys") or Workspace:WaitForChild(LP.Name .. "SpawnedInToys", 8)
+		if not inv or not active(gen) then
+			return nil, "Toy inventory was not found."
+		end
 
-homeRightScript:AddButton({
-	Text = "Rejoin Server",
-	Func = function()
-		pcall(function()
-			if game.VIPServerId ~= "" and game.VIPServerId ~= nil then
-				TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, localPlayer)
-			else
-				TeleportService:Teleport(game.PlaceId, localPlayer)
+		local toy
+		local conn = inv.ChildAdded:Connect(function(child)
+			if not toy and looksLikeStair(child.Name) and (child:IsA("Model") or child:IsA("BasePart")) then
+				toy = child
 			end
 		end)
-	end,
-})
 
-homeRightScript:AddButton({
-	Text = "Copy Discord Link",
-	Func = function()
-		pcall(function() setclipboard("https://discord.gg/astra") end)
-		lib:Notify({
-			Title = "<b>ASTRA</b>",
-			Description = "Copied Discord invite link.",
-			BigIcon = "rbxassetid://104599341811828",
-			Time = 2.5,
-		})
-	end,
-})
+		notifySpider("Spider", "Stairs not identified. Spawn one stair from Your Toys; it will be the first leg.")
+		local started = os.clock()
+		while active(gen) and not toy and os.clock() - started < 60 do
+			task.wait(0.1)
+		end
+		disconnect(conn)
 
-homeRightScript:AddDivider()
-homeRightScript:AddCheckbox("JoinWithAntiLag", { Text = "Join With Anti Lag", Default = true })
-homeRightScript:AddCheckbox("JoinWithScript", { Text = "Join With Script", Default = false })
+		if not toy or not active(gen) then
+			return nil, "No stair was detected in your spawned toys."
+		end
 
-print("ASTRA Obsidian UI loaded successfully.")
+		state.toys[#state.toys + 1] = toy
+		local part = rootOf(toy)
+		started = os.clock()
+		while active(gen) and toy.Parent and not part and os.clock() - started < 4 do
+			task.wait(0.1)
+			part = rootOf(toy)
+		end
+		if not part then
+			return nil, "Stair has no movable part."
+		end
+		return toy, part
+	end
+
+	local function spawnToy(name, cf, gen)
+		local menu = ReplicatedStorage:FindFirstChild("MenuToys")
+		local remote = menu and menu:FindFirstChild("SpawnToyRemoteFunction")
+		local inv = Workspace:FindFirstChild(LP.Name .. "SpawnedInToys") or Workspace:WaitForChild(LP.Name .. "SpawnedInToys", 8)
+		if not (remote and inv and active(gen)) then
+			return nil, "Game toy spawn service is unavailable."
+		end
+
+		local start = os.clock()
+		while active(gen) and os.clock() - start < 12 do
+			local can = LP:FindFirstChild("CanSpawnToy")
+			if not can or can.Value then
+				break
+			end
+			task.wait(0.12)
+		end
+
+		local can = LP:FindFirstChild("CanSpawnToy")
+		if can and not can.Value then
+			return nil, "Toy limit or cooldown blocked the spawn."
+		end
+		if not active(gen) then
+			return nil, "Cancelled."
+		end
+
+		local found, failed, done = nil, nil, false
+		local conn = inv.ChildAdded:Connect(function(child)
+			if not found and child.Name == name then
+				found = child
+			end
+		end)
+
+		task.spawn(function()
+			local ok, err = pcall(function()
+				remote:InvokeServer(name, cf, Vector3.zero)
+			end)
+			if not ok then
+				failed = tostring(err)
+			end
+			done = true
+		end)
+
+		start = os.clock()
+		while active(gen) and not found and not failed and os.clock() - start < 12 do
+			task.wait(0.1)
+		end
+		disconnect(conn)
+
+		if not found then
+			return nil, failed or (done and ("The server did not spawn " .. name .. ". Check toy ownership and slots.") or "Toy spawn timed out.")
+		end
+		if not active(gen) then
+			destroyToy(found)
+			return nil, "Cancelled."
+		end
+
+		state.toys[#state.toys + 1] = found
+		local part = rootOf(found)
+		start = os.clock()
+		while active(gen) and not part and found.Parent and os.clock() - start < 4 do
+			task.wait(0.1)
+			part = rootOf(found)
+		end
+		if not part then
+			return nil, "The spawned toy has no movable part."
+		end
+		return found, part
+	end
+
+	local function claim(part, gen)
+		if not part or part.Anchored or not part.Parent then
+			return false
+		end
+		local folder = ReplicatedStorage:FindFirstChild("GrabEvents")
+		local remote = folder and folder:FindFirstChild("SetNetworkOwner")
+		if not remote then
+			return false
+		end
+
+		local start = os.clock()
+		repeat
+			pcall(function()
+				remote:FireServer(part, part.CFrame)
+			end)
+			local owner = part:FindFirstChild("PartOwner") or (part.Parent and part.Parent:FindFirstChild("PartOwner", true))
+			if owner and owner.Value == LP.Name then
+				return true
+			end
+			local ok, age = pcall(function()
+				return part.ReceiveAge
+			end)
+			if ok and age == 0 then
+				return true
+			end
+			task.wait(0.1)
+		until not active(gen) or not part.Parent or os.clock() - start > 2
+		return false
+	end
+
+	local function measureToy(toy, part)
+		local ok, frame, size = pcall(function()
+			if toy:IsA("Model") then
+				return toy:GetBoundingBox()
+			end
+			return toy.CFrame, toy.Size
+		end)
+		if ok and frame and size and type(size.X) == "number" and type(size.Y) == "number" and type(size.Z) == "number" then
+			local good, offset = pcall(function()
+				return part.CFrame:ToObjectSpace(frame)
+			end)
+			if good then
+				return offset, size
+			end
+		end
+		return CFrame.new(), part.Size or Vector3.new(2, 5, 2)
+	end
+
+	local function flatPallet(size)
+		if size.X <= size.Y and size.X <= size.Z then
+			return CFrame.Angles(0, 0, math.pi / 2), size.X, size.Y, size.Z
+		elseif size.Z <= size.X and size.Z <= size.Y then
+			return CFrame.Angles(-math.pi / 2, 0, 0), size.Z, size.X, size.Y
+		end
+		return CFrame.new(), size.Y, size.X, size.Z
+	end
+
+	local function uprightStair(size)
+		if size.X >= size.Y and size.X >= size.Z then
+			local wideX = size.Y >= size.Z
+			return CFrame.Angles(0, 0, math.pi / 2), size.X, wideX and size.Y or size.Z, wideX and size.Z or size.Y, wideX and "X" or "Z"
+		elseif size.Z >= size.X and size.Z >= size.Y then
+			local wideX = size.X >= size.Y
+			return CFrame.Angles(-math.pi / 2, 0, 0), size.Z, wideX and size.X or size.Y, wideX and size.Y or size.X, wideX and "X" or "Z"
+		end
+		local wideX = size.X >= size.Z
+		return CFrame.new(), size.Y, wideX and size.X or size.Z, wideX and size.Z or size.X, wideX and "X" or "Z"
+	end
+
+	local function getControlInput()
+		if state.controls then
+			return state.controls
+		end
+		if state.nextControlsScan and os.clock() < state.nextControlsScan then
+			return nil
+		end
+		state.nextControlsScan = os.clock() + 2
+		pcall(function()
+			local scripts = LP:FindFirstChildOfClass("PlayerScripts") or LP:FindFirstChild("PlayerScripts")
+			local module = scripts and scripts:FindFirstChild("PlayerModule")
+			if module then
+				local playerModule = require(module)
+				state.controls = playerModule:GetControls() or false
+			end
+		end)
+		return state.controls or nil
+	end
+
+	local function moveInput(hum, seat)
+		local move = hum.MoveDirection or Vector3.zero
+		local controls = getControlInput()
+		if controls then
+			local ok, v = pcall(function()
+				return controls:GetMoveVector()
+			end)
+			if ok and v and v.Magnitude > 0.05 then
+				local camera = Workspace.CurrentCamera
+				if camera then
+					local forward = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
+					local right = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
+					if forward.Magnitude > 0.001 and right.Magnitude > 0.001 then
+						move = right.Unit * v.X - forward.Unit * v.Z
+					end
+				end
+			end
+		end
+		move = Vector3.new(move.X, 0, move.Z)
+		if move.Magnitude < 0.05 then
+			local throttle = seat.ThrottleFloat or seat.Throttle or 0
+			local look = seat.CFrame.LookVector
+			move = Vector3.new(look.X, 0, look.Z) * throttle
+		end
+		if move.Magnitude > 1 then
+			move = move.Unit
+		end
+		return move
+	end
+
+	local function startSpider(gen)
+		local character = LP.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local hum = character and character:FindFirstChildOfClass("Humanoid")
+		if not (root and hum and hum.Health > 0) then
+			stopWith(gen, "Character is not ready.")
+			return
+		end
+
+		notifySpider("Spider", "Spawning tractor and attempting to sit.")
+		local tractor = spawnToy("TractorGreen", root.CFrame * CFrame.new(0, 2, -5), gen)
+		if not tractor then
+			stopWith(gen, "Failed to spawn TractorGreen.")
+			return
+		end
+
+		local seat
+		local start = os.clock()
+		while active(gen) and tractor.Parent and os.clock() - start < 8 do
+			seat = tractor:FindFirstChildWhichIsA("VehicleSeat", true) or tractor:FindFirstChildWhichIsA("Seat", true)
+			if seat then
+				break
+			end
+			task.wait(0.1)
+		end
+		if not seat then
+			stopWith(gen, "The tractor has no usable seat.")
+			return
+		end
+
+		local drivePart = seat.AssemblyRootPart or seat
+		if not claim(drivePart, gen) then
+			stopWith(gen, "Could not obtain tractor ownership.")
+			return
+		end
+
+		local position, orientation
+		local ok, err = pcall(function()
+			local attachment = Instance.new("Attachment")
+			state.attachments[#state.attachments + 1] = attachment
+			attachment.Name = "AstraSpiderDriveAttachment"
+			attachment.Parent = seat
+
+			position = Instance.new("AlignPosition")
+			state.attachments[#state.attachments + 1] = position
+			position.Name = "AstraSpiderDrivePosition"
+			position.Mode = Enum.PositionAlignmentMode.OneAttachment
+			position.Attachment0 = attachment
+			position.MaxForce = 10000000
+			position.MaxVelocity = 45
+			position.Responsiveness = 30
+			position.ApplyAtCenterOfMass = true
+			position.Position = seat.Position
+			position.Parent = seat
+
+			orientation = Instance.new("AlignOrientation")
+			state.attachments[#state.attachments + 1] = orientation
+			orientation.Name = "AstraSpiderDriveOrientation"
+			orientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
+			orientation.Attachment0 = attachment
+			orientation.MaxTorque = 10000000
+			orientation.Responsiveness = 30
+			orientation.CFrame = seat.CFrame.Rotation
+			orientation.Parent = seat
+		end)
+		if not ok then
+			stopWith(gen, "Could not set up tractor controls: " .. tostring(err))
+			return
+		end
+
+		state.seat = seat
+		state.hum = hum
+		watchForPlayerTouch(tractor, drivePart, gen)
+
+		start = os.clock()
+		while active(gen) and seat.Parent and hum.SeatPart ~= seat and os.clock() - start < 4 do
+			pcall(function()
+				root.CFrame = seat.CFrame * CFrame.new(0, 2, 0)
+				seat:Sit(hum)
+			end)
+			task.wait(0.1)
+		end
+		if hum.SeatPart ~= seat then
+			stopWith(gen, "The server did not seat the character in the tractor.")
+			return
+		end
+
+		local stairName = findStairName()
+		local manualToy, manualPart
+		if not stairName then
+			manualToy, manualPart = waitManualStair(gen)
+			if not manualToy then
+				stopWith(gen, tostring(manualPart))
+				return
+			end
+			stairName = manualToy.Name
+		end
+		if not active(gen) then
+			return
+		end
+
+		local specs = {
+			{ name = "PalletLightBrown", kind = "body", offset = CFrame.new() },
+			{ name = stairName, kind = "upper", side = "leftfront", offset = CFrame.new(-4, 0, -4) },
+			{ name = stairName, kind = "lower", side = "leftfront", offset = CFrame.new(-6, 0, -4) },
+			{ name = stairName, kind = "upper", side = "rightfront", offset = CFrame.new(4, 0, -4) },
+			{ name = stairName, kind = "lower", side = "rightfront", offset = CFrame.new(6, 0, -4) },
+			{ name = stairName, kind = "upper", side = "leftback", offset = CFrame.new(-4, 0, 4) },
+			{ name = stairName, kind = "lower", side = "leftback", offset = CFrame.new(-6, 0, 4) },
+			{ name = stairName, kind = "upper", side = "rightback", offset = CFrame.new(4, 0, 4) },
+			{ name = stairName, kind = "lower", side = "rightback", offset = CFrame.new(6, 0, 4) },
+		}
+
+		local pieces = {}
+		for _, spec in ipairs(specs) do
+			if not active(gen) then
+				return
+			end
+			local toy, part
+			if spec.kind ~= "body" and manualToy then
+				toy, part = manualToy, manualPart
+				manualToy = nil
+			else
+				toy, part = spawnToy(spec.name, seat.CFrame * spec.offset, gen)
+			end
+			if not toy then
+				stopWith(gen, tostring(part))
+				return
+			end
+			if not claim(part, gen) then
+				stopWith(gen, "Could not obtain network ownership for " .. spec.name .. ".")
+				return
+			end
+
+			local made, _, p, o = pcall(function()
+				local att = Instance.new("Attachment")
+				state.attachments[#state.attachments + 1] = att
+				att.Name = "AstraSpiderAttachment"
+				att.Parent = part
+
+				local ap = Instance.new("AlignPosition")
+				state.attachments[#state.attachments + 1] = ap
+				ap.Name = "AstraSpiderPosition"
+				ap.Mode = Enum.PositionAlignmentMode.OneAttachment
+				ap.Attachment0 = att
+				ap.MaxForce = 4000000
+				ap.MaxVelocity = 120
+				ap.Responsiveness = 70
+				ap.ApplyAtCenterOfMass = true
+				ap.Position = (seat.CFrame * spec.offset).Position
+				ap.Parent = part
+
+				local ao = Instance.new("AlignOrientation")
+				state.attachments[#state.attachments + 1] = ao
+				ao.Name = "AstraSpiderOrientation"
+				ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+				ao.Attachment0 = att
+				ao.MaxTorque = 4000000
+				ao.Responsiveness = 70
+				ao.CFrame = part.CFrame.Rotation
+				ao.Parent = part
+
+				return att, ap, ao
+			end)
+			if not made then
+				stopWith(gen, "Could not create toy constraints: " .. tostring(p))
+				return
+			end
+
+			pcall(function()
+				local all = toy:GetDescendants()
+				if toy:IsA("BasePart") then
+					all[#all + 1] = toy
+				end
+				for _, piece in ipairs(all) do
+					if piece:IsA("BasePart") then
+						state.collisions[piece] = piece.CanCollide
+						piece.CanCollide = false
+						state.colors[piece] = piece.Color
+						piece.Color = spec.kind == "body" and Color3.fromRGB(60, 210, 35) or Color3.fromRGB(222, 166, 110)
+					end
+				end
+			end)
+
+			local bounds, size = measureToy(toy, part)
+			pieces[#pieces + 1] = {
+				toy = toy,
+				part = part,
+				position = p,
+				orientation = o,
+				kind = spec.kind,
+				side = spec.side,
+				bounds = bounds,
+				size = size,
+			}
+			watchForPlayerTouch(toy, part, gen)
+		end
+
+		local bodyTip, bodyHeight, bodyWidth, bodyDepth = flatPallet(pieces[1].size)
+		bodyHeight = math.clamp(bodyHeight, 0.2, 40)
+		bodyWidth = math.clamp(bodyWidth, 0.5, 40)
+		bodyDepth = math.clamp(bodyDepth, 0.5, 40)
+
+		local maxLegHeight = 0
+		local legGroups = {}
+		local sides = { "leftfront", "rightfront", "leftback", "rightback" }
+		for _, item in ipairs(pieces) do
+			if item.kind ~= "body" then
+				local tip, height, _, thickness = uprightStair(item.size)
+				item.tip = tip
+				item.height = math.clamp(height, 0.2, 40)
+				item.thickness = math.clamp(thickness, 0.1, 20)
+				local group = legGroups[item.side] or {}
+				legGroups[item.side] = group
+				group[item.kind] = item
+				if item.kind == "lower" then
+					maxLegHeight = math.max(maxLegHeight, item.height)
+				end
+			end
+		end
+
+		for _, side in ipairs(sides) do
+			local group = legGroups[side]
+			if not group or not group.upper or not group.lower then
+				stopWith(gen, "A spider leg is incomplete.")
+				return
+			end
+		end
+
+		local function segmentFrame(startPos, endPos)
+			local delta = endPos - startPos
+			local up = delta.Magnitude > 0.001 and delta.Unit or Vector3.new(0, 1, 0)
+			local ref = Vector3.new(0, 0, 1)
+			if math.abs(up:Dot(ref)) > 0.95 then
+				ref = Vector3.new(1, 0, 0)
+			end
+			local right = up:Cross(ref).Unit
+			local back = right:Cross(up).Unit
+			return CFrame.fromMatrix((startPos + endPos) * 0.5, right, up, back)
+		end
+
+		local function kneePosition(hip, foot, lengthUpper, lengthLower, outward)
+			local delta = foot - hip
+			local rawDistance = delta.Magnitude
+			local axis = rawDistance > 0.001 and delta.Unit or outward
+			local minimum = math.abs(lengthUpper - lengthLower) + 0.001
+			local maximum = math.max(minimum, lengthUpper + lengthLower - 0.001)
+			local distance = math.clamp(rawDistance, minimum, maximum)
+			local actualFoot = hip + axis * distance
+			local along = (lengthUpper * lengthUpper - lengthLower * lengthLower + distance * distance) / (2 * distance)
+			local rise = math.sqrt(math.max(0, lengthUpper * lengthUpper - along * along))
+			local perpendicular = outward - axis * outward:Dot(axis)
+			if perpendicular.Magnitude < 0.001 then
+				local up = Vector3.new(0, 1, 0)
+				perpendicular = up - axis * up:Dot(axis)
+			end
+			perpendicular = perpendicular.Unit
+			if perpendicular.Y < 0 then
+				perpendicular = -perpendicular
+			end
+			return hip + axis * along + perpendicular * rise, actualFoot
+		end
+
+		local desired = seat.Position + Vector3.new(0, math.clamp(maxLegHeight + 1, 1, 20), 0)
+		local direction = seat.CFrame.LookVector
+		direction = Vector3.new(direction.X, 0, direction.Z)
+		if direction.Magnitude < 0.001 then
+			direction = Vector3.new(0, 0, -1)
+		else
+			direction = direction.Unit
+		end
+
+		local phase = 0
+		local walkBlend = 0
+		local accumulator = 0
+		local ownerTime = 0
+		local warned = false
+
+		state.conn = RunService.Heartbeat:Connect(function(dt)
+			if not active(gen) then
+				return
+			end
+			local success, message = pcall(function()
+				if LP.Character ~= character or not seat.Parent or hum.Health <= 0 then
+					error("Character or tractor changed.")
+				end
+				if hum.SeatPart ~= seat then
+					error("You left the tractor seat.")
+				end
+
+				accumulator += math.min(dt, 0.1)
+				if accumulator < 0.05 then
+					return
+				end
+				local step = math.min(accumulator, 0.1)
+				accumulator = 0
+
+				local move = moveInput(hum, seat)
+				local moving = move.Magnitude > 0.05
+				if moving then
+					direction = move.Unit
+					local drift = Vector3.new(desired.X - seat.Position.X, 0, desired.Z - seat.Position.Z)
+					if drift.Magnitude > 10 then
+						local bounded = drift.Unit * 10
+						desired = Vector3.new(seat.Position.X + bounded.X, desired.Y, seat.Position.Z + bounded.Z)
+					end
+					desired = desired + move * 18 * step
+					phase += step * 7
+				end
+
+				local blendTarget = moving and 1 or 0
+				walkBlend = walkBlend + (blendTarget - walkBlend) * math.min(1, step * 8)
+				position.Position = desired
+				orientation.CFrame = CFrame.lookAt(Vector3.zero, direction).Rotation
+
+				local look = seat.CFrame.LookVector
+				local flat = Vector3.new(look.X, 0, look.Z)
+				if flat.Magnitude < 0.001 then
+					flat = direction
+				end
+
+				local centerPos = seat.Position + Vector3.new(0, seat.Size.Y * 0.5 - bodyHeight * 0.5, 0)
+				local center = CFrame.lookAt(centerPos, centerPos + flat.Unit)
+
+				for _, item in ipairs(pieces) do
+					if not item.toy.Parent or not item.part.Parent then
+						error("A toy was removed.")
+					end
+				end
+
+				local body = pieces[1]
+				local bodyGoal = center * bodyTip * body.bounds:Inverse()
+				body.position.Position = bodyGoal.Position
+				body.orientation.CFrame = bodyGoal.Rotation
+
+				for _, side in ipairs(sides) do
+					local group = legGroups[side]
+					local upper, lower = group.upper, group.lower
+					local sideSign = side:find("left", 1, true) and -1 or 1
+					local frontSign = side:find("front", 1, true) and -1 or 1
+					local diagonal = (side == "leftfront" or side == "rightback") and 1 or -1
+					local hip = Vector3.new(sideSign * bodyWidth * 0.5, -bodyHeight * 0.5, frontSign * bodyDepth * 0.33)
+					local outward = Vector3.new(sideSign, 0, frontSign * 0.42).Unit
+					local stride = math.cos(phase) * lower.height * 0.32 * diagonal * walkBlend
+					local lift = math.max(0, math.sin(phase) * diagonal) * lower.height * 0.25 * walkBlend
+					local foot = hip + outward * (upper.height * 0.98) + Vector3.new(0, -lower.height * 0.92 + lift, stride)
+					local knee, adjustedFoot = kneePosition(hip, foot, upper.height, lower.height, outward)
+					local upperGoal = center * segmentFrame(hip, knee) * upper.tip * upper.bounds:Inverse()
+					local lowerGoal = center * segmentFrame(knee, adjustedFoot) * lower.tip * lower.bounds:Inverse()
+					upper.position.Position = upperGoal.Position
+					upper.orientation.CFrame = upperGoal.Rotation
+					lower.position.Position = lowerGoal.Position
+					lower.orientation.CFrame = lowerGoal.Rotation
+				end
+
+				for _, item in ipairs(pieces) do
+					if (item.part.Position - item.position.Position).Magnitude > 3 then
+						requestRecovery(item.part)
+					end
+				end
+
+				ownerTime += step
+				if ownerTime >= 3 then
+					ownerTime = 0
+					local events = ReplicatedStorage:FindFirstChild("GrabEvents")
+					local remote = events and events:FindFirstChild("SetNetworkOwner")
+					local uncertain = false
+					local parts = { drivePart }
+					for _, item in ipairs(pieces) do
+						parts[#parts + 1] = item.part
+					end
+					for _, part in ipairs(parts) do
+						local good, age = pcall(function()
+							return part.ReceiveAge
+						end)
+						if good and age > 0.2 then
+							uncertain = true
+						end
+						if remote then
+							pcall(function()
+								remote:FireServer(part, part.CFrame)
+							end)
+						end
+					end
+					if uncertain and not warned then
+						warned = true
+						notifySpider("Spider", "Ownership is uncertain; movement may not replicate.")
+					end
+				end
+			end)
+
+			if not success then
+				stopWith(gen, "Spider stopped: " .. tostring(message))
+			end
+		end)
+
+		notifySpider("Spider", "Spider enabled.")
+	end
+
+	toysGroup:AddLabel("Requires up to 10 toy slots (tractor, pallet, and 8 stair segments).", true)
+
+	toysGroup:AddToggle("AstraSpider", {
+		Text = "Spider",
+		Default = false,
+		Callback = function(value)
+			state.generation += 1
+			local gen = state.generation
+			state.enabled = value
+			cleanup()
+
+			if not value then
+				return
+			end
+			if state.working then
+				stopWith(gen, "Wait for the previous spawn attempt to finish.")
+				return
+			end
+
+			state.working = true
+			task.spawn(function()
+				local ok, err = pcall(function()
+					startSpider(gen)
+				end)
+				state.working = false
+				if not ok then
+					stopWith(gen, "Spider error: " .. tostring(err))
+				end
+			end)
+		end,
+	})
+
+	if lib and lib.OnUnload then
+		lib:OnUnload(function()
+			state.enabled = false
+			state.generation += 1
+			cleanup()
+		end)
+	end
+end
