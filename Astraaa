@@ -1,0 +1,677 @@
+--[================================================================================]--
+-- ASTRA v4.649 (Obsidian UI + Defence Tab + Server Shutdown)
+--[================================================================================]--
+
+-- ===== compat shims =====
+queue_on_teleport = queue_on_teleport or function() end
+cloneref = cloneref or function(o) return o end
+clonefunction = clonefunction or function(f) return f end
+-- =======================================
+
+if game.PlaceId ~= 6961824067 then
+	game:GetService("Players").LocalPlayer:Kick("ASTRA SCRIPT")
+	return
+end
+
+if getgenv()._SCRIPT_LOADED then
+	warn("ASTRA is already loaded! Unload the current script to run it again.")
+	return
+end
+getgenv()._SCRIPT_LOADED = true
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local CoreGui = game:GetService("CoreGui")
+local TextService = game:GetService("TextService")
+local Debris = game:GetService("Debris")
+
+local localPlayer = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() and Players.LocalPlayer
+local localPlayer2 = localPlayer
+
+local defaultColors = {
+	MainColor = "121212",
+	FontFace = "Gotham",
+	AccentColor = "007aff",
+	OutlineColor = "252528",
+	BackgroundColor = "0c0c0c",
+	FontColor = "c1cdcd",
+}
+getgenv()._DEFAULT_COLORS = defaultColors
+
+local Library
+local n13 = 0
+
+getgenv()._NOTIFICATION_CENTER = {
+	enabled = true,
+	SendNotif = function(self, title, desc, icon, duration, soundId, volume, soundLifetime)
+		if not self.enabled then
+			return false
+		end
+		n13 += 1
+		local notifId = "NC_" .. n13
+
+		if soundId then
+			pcall(function()
+				local sound = Instance.new("Sound")
+				sound.SoundId = soundId
+				sound.Volume = volume or 1.5
+				sound.RollOffMaxDistance = 0
+				sound.Parent = workspace
+				sound:Play()
+				Debris:AddItem(sound, soundLifetime or 2)
+			end)
+		end
+
+		if Library and Library.Notify then
+			pcall(function()
+				_G._suppressNextNotifSound = true
+				Library:Notify({
+					Title = title or "Notification",
+					Description = desc or "No description",
+					BigIcon = icon or "rbxassetid://104599341811828",
+					Time = duration or 2.5,
+				})
+				_G._suppressNextNotifSound = true
+			end)
+		end
+
+		return notifId
+	end,
+}
+
+task.spawn(function()
+	pcall(function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/7Savitar/Obsidian/refs/heads/main/infyield.txt"))()
+	end)
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(60)
+		pcall(function()
+			collectgarbage("step", 200)
+		end)
+	end
+end)
+
+-- ===== DESYNC SYSTEM =====
+local desync = {
+	enabled = false,
+	loc = CFrame.new(),
+	isOffsetted = false,
+	_requestActive = false,
+	_targetCFFunc = nil,
+	_requestTimeout = 5,
+	_requestStartTime = 0,
+	_spinConn = nil,
+	serverCF = nil,
+}
+
+local function startDesyncSpin()
+	if desync._spinConn then return end
+	desync._spinConn = RunService.Heartbeat:Connect(function()
+		local char = localPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp and desync.enabled then
+			hrp.AssemblyAngularVelocity = Vector3.new(0, 0.01, 0)
+		end
+	end)
+end
+
+local function stopDesyncSpin()
+	task.delay(5, function()
+		if desync._spinConn and not desync.enabled then
+			desync._spinConn:Disconnect()
+			desync._spinConn = nil
+		end
+	end)
+end
+
+function desync:GetServerCFrame()
+	local char = localPlayer.Character
+	local hrp = char and (char:FindFirstChild("saviHRP") or char:FindFirstChild("HumanoidRootPart"))
+	if not hrp then return nil end
+
+	if self.enabled then
+		if self._requestActive and self._targetCFFunc then
+			local ok, result = pcall(self._targetCFFunc)
+			if ok and typeof(result) == "CFrame" then
+				return result
+			end
+		end
+		if self.serverCF and typeof(self.serverCF) == "CFrame" then
+			return self.serverCF
+		end
+	end
+	return hrp.CFrame
+end
+
+function desync:RequestDesync(targetCFFunc, requestTimeout)
+	if self._requestActive then return false end
+	self._requestActive = true
+	self._targetCFFunc = targetCFFunc
+	self._requestTimeout = requestTimeout or 5
+	self._requestStartTime = tick()
+
+	if not self.enabled then
+		self.enabled = true
+		startDesyncSpin()
+		local char = localPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			self.loc = hrp.CFrame
+			self.isOffsetted = false
+		end
+	end
+	return true
+end
+
+function desync:CancelRequest()
+	if not self._requestActive then return end
+	self._requestActive = false
+	self._targetCFFunc = nil
+	self.serverCF = nil
+	local char = localPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if hrp and self.isOffsetted then
+		hrp.CFrame = self.loc
+	end
+	self.isOffsetted = false
+	self.enabled = false
+	stopDesyncSpin()
+end
+
+function desync:IsAvailable()
+	return not self._requestActive
+end
+
+RunService.Stepped:Connect(function()
+	if desync.enabled and desync.isOffsetted and localPlayer.Character then
+		local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp and desync.loc then
+			hrp.CFrame = desync.loc
+			desync.isOffsetted = false
+		end
+	end
+end)
+
+RunService:BindToRenderStep("_GlobalDesyncCamFix", 0, function()
+	if desync.enabled and desync.isOffsetted and localPlayer.Character then
+		local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp and desync.loc then
+			hrp.CFrame = desync.loc
+			desync.isOffsetted = false
+		end
+	end
+end)
+
+RunService.Heartbeat:Connect(function()
+	if not desync.enabled or not localPlayer.Character then return end
+	local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	desync.loc = hrp.CFrame
+
+	if desync._requestActive and desync._requestStartTime then
+		if desync._requestTimeout <= tick() - desync._requestStartTime then
+			desync:CancelRequest()
+			return
+		end
+	end
+
+	if desync._requestActive and desync._targetCFFunc then
+		local ok, cf = pcall(desync._targetCFFunc)
+		if ok and typeof(cf) == "CFrame" then
+			hrp.CFrame = cf
+			desync.serverCF = cf
+			desync.isOffsetted = true
+		end
+	end
+end)
+
+localPlayer.CharacterAdded:Connect(function(char)
+	task.wait(0.1)
+	local hrp = char:WaitForChild("HumanoidRootPart", 10)
+	if hrp then
+		desync.loc = hrp.CFrame
+	end
+	desync.isOffsetted = false
+	desync.serverCF = nil
+	if desync._requestActive then
+		desync._requestActive = false
+		desync._targetCFFunc = nil
+		desync.enabled = false
+		stopDesyncSpin()
+	end
+end)
+
+getgenv()._DESYNC = desync
+
+-- ===== OBSIDIAN LIBRARY SETUP =====
+local okLib, lib = pcall(function()
+	return loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
+end)
+
+if not okLib or type(lib) ~= "table" then
+	warn("ASTRA: Failed to load Obsidian Library:", tostring(lib))
+	return
+end
+
+Library = lib
+lib.CornerRadius = 15
+lib.Scheme.BackgroundColor = Color3.fromHex(defaultColors.BackgroundColor)
+lib.Scheme.MainColor = Color3.fromHex(defaultColors.MainColor)
+lib.Scheme.AccentColor = Color3.fromHex(defaultColors.AccentColor)
+lib.Scheme.OutlineColor = Color3.fromHex(defaultColors.OutlineColor)
+lib.Scheme.FontColor = Color3.fromHex(defaultColors.FontColor)
+lib.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
+
+local function applyCornerRadius(radius)
+	local r = tonumber(radius) or 15
+	lib.CornerRadius = r
+	if lib.ScreenGui then
+		for _, desc in ipairs(lib.ScreenGui:GetDescendants()) do
+			if desc:IsA("UICorner") and desc.CornerRadius.Scale == 0 then
+				desc.CornerRadius = UDim.new(0, r)
+			end
+		end
+	end
+	if _wmCorner then
+		_wmCorner.CornerRadius = UDim.new(0, r)
+	end
+end
+_applyCornerRadius = applyCornerRadius
+
+local origGetCustomIcon = lib.GetCustomIcon
+lib.GetCustomIcon = function(self, iconName, arg2)
+	local candidate = arg2 ~= nil and arg2 or iconName
+	if type(candidate) == "number" or tonumber(candidate) then
+		return {
+			Url = string.format("rbxthumb://type=Asset&id=%.0f&w=150&h=150", tonumber(candidate)),
+			ImageRectOffset = Vector2.zero,
+			ImageRectSize = Vector2.zero,
+			Custom = nil,
+		}
+	end
+	if type(origGetCustomIcon) == "function" then
+		return origGetCustomIcon(self, candidate)
+	end
+	return nil
+end
+
+-- ===== THEME MANAGER =====
+local hasFs = type(isfolder) == "function" and type(makefolder) == "function" and type(isfile) == "function" and type(writefile) == "function" and type(readfile) == "function"
+local themeFields = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
+
+local obsidianThemeManager = {
+	Folder = "AstraLibSettings",
+	Library = lib,
+	AppliedToTab = false,
+	BuiltInThemes = {
+		Default = {
+			1,
+			{
+				FontColor = "c1cdcd",
+				MainColor = "121212",
+				AccentColor = "007aff",
+				BackgroundColor = "0c0c0c",
+				OutlineColor = "252528",
+			},
+		},
+		BBot = {
+			2,
+			{
+				FontColor = "ffffff",
+				MainColor = "1e1e1e",
+				AccentColor = "7e48a3",
+				BackgroundColor = "232323",
+				OutlineColor = "141414",
+			},
+		},
+	},
+}
+
+function obsidianThemeManager:SetLibrary(library)
+	self.Library = library
+end
+
+function obsidianThemeManager:GetPaths()
+	local paths = {}
+	local parts = self.Folder:split("/")
+	for i = 1, #parts do
+		paths[#paths + 1] = table.concat(parts, "/", 1, i)
+	end
+	paths[#paths + 1] = self.Folder .. "/themes"
+	return paths
+end
+
+function obsidianThemeManager:BuildFolderTree()
+	if not hasFs then return end
+	for _, path in ipairs(self:GetPaths()) do
+		if not isfolder(path) then
+			pcall(makefolder, path)
+		end
+	end
+end
+
+function obsidianThemeManager:ApplyTheme(themeName)
+	local themeEntry = self.BuiltInThemes[themeName]
+	if not themeEntry then return end
+	local colors = themeEntry[2]
+	for k, v in pairs(colors) do
+		if k == "FontFace" then
+			pcall(function() self.Library:SetFont(Enum.Font[v]) end)
+			if self.Library.Options[k] then
+				pcall(function() self.Library.Options[k]:SetValue(v) end)
+			end
+		else
+			local col = Color3.fromHex(v)
+			self.Library.Scheme[k] = col
+			if self.Library.Options[k] then
+				pcall(function() self.Library.Options[k]:SetValueRGB(col) end)
+			end
+		end
+	end
+	self:ThemeUpdate()
+end
+
+function obsidianThemeManager:ThemeUpdate()
+	for _, field in ipairs(themeFields) do
+		if self.Library.Options and self.Library.Options[field] then
+			self.Library.Scheme[field] = self.Library.Options[field].Value
+		end
+	end
+	if self.Library.UpdateColorsUsingRegistry then
+		self.Library:UpdateColorsUsingRegistry()
+	end
+end
+
+obsidianThemeManager:BuildFolderTree()
+getgenv().ObsidianThemeManager = obsidianThemeManager
+
+-- ===== CREATE OBSIDIAN WINDOW & TABS =====
+local window = lib:CreateWindow({
+	Title = "<b>ASTRA</b>",
+	Icon = 104599341811828,
+	Footer = "<b>ASTRA • Make them fear you</b>",
+	Font = Enum.Font.Gotham,
+	NotifySide = "Right",
+	ShowCustomCursor = true,
+	Center = true,
+	AutoShow = true,
+	Resizable = true,
+	Size = UDim2.fromOffset(680, 630),
+	CornerRadius = 15,
+	EnableSidebarResize = true,
+	EnableCompacting = true,
+	SidebarCompacted = true,
+	SidebarCompactWidth = 48,
+	MinSidebarWidth = 100,
+	CompactWidthActivation = 100,
+	BackgroundImage = "rbxassetid://0",
+})
+
+if lib.ScreenGui then
+	for _, desc in ipairs(lib.ScreenGui:GetDescendants()) do
+		if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+			desc.RichText = true
+		end
+	end
+	lib.ScreenGui.DescendantAdded:Connect(function(desc)
+		if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+			desc.RichText = true
+		end
+		if desc:IsA("UICorner") and desc.CornerRadius.Scale == 0 then
+			desc.CornerRadius = UDim.new(0, lib.CornerRadius or 15)
+		end
+	end)
+	applyCornerRadius(15)
+end
+
+local tabs = {
+	Home = window:AddTab("<b>Home</b>", "house", "System stats and main utilities"),
+	Player = window:AddTab("<b>Player</b>", "user", "Character mods and movement controls"),
+	Defence = window:AddTab("<b>Defence</b>", "shield", "Protection modules and counter measures"),
+	Combat = window:AddTab("<b>Miscellaneous</b>", "shuffle", "Additional misc features and extra utilities"),
+	Target = window:AddTab("<b>Target</b>", "crosshair", "Target selection and method options"),
+	Blobman = window:AddTab("<b>Blobman</b>", 100381793919290, "Blobman Functions and method options"),
+	Pose = window:AddTab("<b>Pose</b>", "person-standing", "Custom character poses and offsets"),
+	AimActivity = window:AddTab("<b>Aim</b>", "mouse", "Aim assistance and targeting utilities"),
+	Keybinds = window:AddTab("<b>Keybinds</b>", "keyboard", "Keybind configurations and hotkeys"),
+	NewESP = window:AddTab("<b>ESP</b>", "eye", "Visual overlays, ESP, and audio settings"),
+	ShaderMap = window:AddTab("<b>Visual</b>", "wallpaper", "Environmental graphics and ambient sounds"),
+	AimTrainer = window:AddTab("<b>AimTrainer</b>", "circle-plus", "Aim practice environment"),
+	Whitelist = window:AddTab("<b>Whitelist</b>", "scroll-text", "Whitelist, protections, and gamepasses"),
+	Settings = window:AddTab("<b>Settings</b>", "cog", "Notifications, themes, and UI preferences"),
+	Server = window:AddTab("<b>Server</b>", "server", "Server management, crash functions, and info"),
+}
+
+-- ===== DEFENCE TAB (OBSIDIAN UI) =====
+local defenceLeft = tabs.Defence:AddLeftGroupbox("<b>Anti-Grab & Counter</b>", "shield")
+local defenceRight = tabs.Defence:AddRightGroupbox("<b>Desync & Safeguards</b>", "lock")
+
+getgenv()._DEFENCE_STATE = {
+	AntiGrab = false,
+	AutoBreakGrab = false,
+	AntiRagdoll = false,
+	DesyncToggle = false,
+}
+
+defenceLeft:AddToggle("DefenceAntiGrab", {
+	Text = "Anti Grab",
+	Default = false,
+	Callback = function(val)
+		getgenv()._DEFENCE_STATE.AntiGrab = val
+	end,
+})
+
+defenceLeft:AddToggle("DefenceAutoBreakGrab", {
+	Text = "Auto Break Grab",
+	Default = false,
+	Callback = function(val)
+		getgenv()._DEFENCE_STATE.AutoBreakGrab = val
+	end,
+})
+
+defenceLeft:AddToggle("DefenceAntiRagdoll", {
+	Text = "Anti Ragdoll",
+	Default = false,
+	Callback = function(val)
+		getgenv()._DEFENCE_STATE.AntiRagdoll = val
+	end,
+})
+
+defenceRight:AddToggle("DefenceDesync", {
+	Text = "Enable Desync",
+	Default = false,
+	Callback = function(val)
+		getgenv()._DEFENCE_STATE.DesyncToggle = val
+		if val then
+			desync:RequestDesync(function()
+				local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+				return hrp and (hrp.CFrame * CFrame.new(0, -12, 0)) or nil
+			end, 30)
+		else
+			desync:CancelRequest()
+		end
+	end,
+})
+
+defenceRight:AddButton({
+	Text = "Reset Desync",
+	Func = function()
+		desync:CancelRequest()
+		lib:Notify({
+			Title = "<b>ASTRA</b>",
+			Description = "Desync state reset.",
+			BigIcon = "rbxassetid://104599341811828",
+			Time = 2.5,
+		})
+	end,
+})
+
+-- ===== SERVER TAB: SERVER SHUTDOWN =====
+local serverGroupbox = tabs.Server:AddLeftGroupbox("<b>Server Control</b>", "server")
+
+local function triggerServerShutdown()
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "ShutdownTimerGui"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = CoreGui
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 320, 0, 100)
+	frame.Position = UDim2.new(0.5, -160, 0.2, 0)
+	frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	frame.BorderSizePixel = 0
+	frame.Parent = screenGui
+
+	local uiCorner = Instance.new("UICorner")
+	uiCorner.CornerRadius = UDim.new(0, 8)
+	uiCorner.Parent = frame
+
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Size = UDim2.new(1, 0, 1, 0)
+	textLabel.BackgroundTransparency = 1
+	textLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+	textLabel.TextSize = 20
+	textLabel.Font = Enum.Font.GothamBold
+	textLabel.Text = "SHUTDOWN CRASHING... (15s)"
+	textLabel.Parent = frame
+
+	task.spawn(function()
+		pcall(function()
+			local dataEvents = ReplicatedStorage:WaitForChild("DataEvents", 10)
+			if dataEvents then
+				local texEvent = dataEvents:FindFirstChild("UpdateTexturesChoice")
+				if texEvent then
+					texEvent:FireServer(("Oats"):rep(1e6))
+				end
+				task.wait()
+				local dataRemote = dataEvents:FindFirstChild("DataRemoteEvent")
+				if dataRemote then
+					dataRemote:FireServer("a")
+					for _ = 1, 1e6 do
+						dataRemote:FireServer()
+					end
+				end
+			end
+		end)
+	end)
+
+	task.spawn(function()
+		for i = 15, 1, -1 do
+			textLabel.Text = "CRASHING SERVER... (" .. tostring(i) .. "s)"
+			task.wait(1)
+		end
+		textLabel.Text = "CRASH SEQUENCE COMPLETE"
+		textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+		task.wait(2)
+		screenGui:Destroy()
+	end)
+end
+
+serverGroupbox:AddButton({
+	Text = "Shutdown Server",
+	Func = function()
+		triggerServerShutdown()
+		lib:Notify({
+			Title = "<b>ASTRA</b>",
+			Description = "Server shutdown sequence triggered!",
+			BigIcon = "rbxassetid://104599341811828",
+			Time = 4,
+		})
+	end,
+})
+
+-- ===== HOME TAB =====
+local homeLeft = tabs.Home:AddLeftGroupbox("<b>A S T R A</b>", "user-round-key")
+local homeRightStats = tabs.Home:AddRightGroupbox("<b>Statistics</b>", "blinds")
+local homeRightScript = tabs.Home:AddRightGroupbox("<b>Script</b>", "code-xml")
+
+local function getGreeting()
+	local hour = tonumber(os.date("%H")) or 12
+	if hour >= 5 and hour < 12 then return "Good Morning" end
+	if hour >= 12 and hour < 17 then return "Good Afternoon" end
+	if hour >= 17 and hour < 21 then return "Good Evening" end
+	return "Good Night"
+end
+
+homeLeft:AddLabel(getGreeting() .. ", <b>" .. localPlayer.Name .. "</b>")
+homeLeft:AddLabel("Enjoy having <b>ASTRA</b>")
+homeLeft:AddLabel("All Credits To: <b>Astra Hub</b>")
+homeLeft:AddLabel("This Script is Still <b>In Development</b>")
+
+local lblTime = homeRightStats:AddLabel("Current time: <b>--:--</b>")
+homeRightStats:AddLabel("Current script version: <b>v4.649</b>")
+local lblFPS = homeRightStats:AddLabel("FPS: <b>--</b>")
+local lblPing = homeRightStats:AddLabel("Ping: <b>-- ms</b>")
+getgenv()._HomeLblFPS = lblFPS
+getgenv()._HomeLblPing = lblPing
+homeRightStats:AddDivider()
+local lblPlayers = homeRightStats:AddLabel("Players in server: <b>--</b>")
+local lblElapsed = homeRightStats:AddLabel("Elapsed time: <b>0 seconds</b>")
+local lblKicked = homeRightStats:AddLabel("Kicked players: <b>0</b>")
+
+local scriptStartTime = tick()
+local homeKickCount = 0
+
+task.spawn(function()
+	while task.wait(1) do
+		if lib.Unloaded then break end
+		local h = tonumber(os.date("%H")) or 0
+		local m = tonumber(os.date("%M")) or 0
+		pcall(function()
+			lblTime:SetText(string.format("Current time: <b>%02d:%02d</b>", h, m))
+			lblPlayers:SetText("Players in server: <b>" .. #Players:GetPlayers() .. " / 25</b>")
+			lblElapsed:SetText("Elapsed time: <b>" .. math.floor(tick() - scriptStartTime) .. " seconds</b>")
+			lblKicked:SetText("Kicked players: <b>" .. homeKickCount .. "</b>")
+		end)
+	end
+end)
+
+homeRightScript:AddButton({
+	Text = "Unload Script",
+	Func = function()
+		getgenv()._SCRIPT_LOADED = false
+		desync:CancelRequest()
+		pcall(function() lib:Unload() end)
+	end,
+})
+
+homeRightScript:AddButton({
+	Text = "Rejoin Server",
+	Func = function()
+		pcall(function()
+			if game.VIPServerId ~= "" and game.VIPServerId ~= nil then
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, localPlayer)
+			else
+				TeleportService:Teleport(game.PlaceId, localPlayer)
+			end
+		end)
+	end,
+})
+
+homeRightScript:AddButton({
+	Text = "Copy Discord Link",
+	Func = function()
+		pcall(function() setclipboard("https://discord.gg/astra") end)
+		lib:Notify({
+			Title = "<b>ASTRA</b>",
+			Description = "Copied Discord invite link.",
+			BigIcon = "rbxassetid://104599341811828",
+			Time = 2.5,
+		})
+	end,
+})
+
+homeRightScript:AddDivider()
+homeRightScript:AddCheckbox("JoinWithAntiLag", { Text = "Join With Anti Lag", Default = true })
+homeRightScript:AddCheckbox("JoinWithScript", { Text = "Join With Script", Default = false })
+
+print("ASTRA Obsidian UI loaded successfully.")
