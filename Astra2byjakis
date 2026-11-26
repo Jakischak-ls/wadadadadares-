@@ -1,5 +1,5 @@
 --[================================================================================]--
--- ASTRA v4.649 (Converted from Savitar to Astra with Server Shutdown & Custom Logo)
+-- ASTRA v4.649 (Obsidian UI + Defence Tab + Server Shutdown)
 --[================================================================================]--
 
 -- ===== compat shims =====
@@ -8,2491 +8,670 @@ cloneref = cloneref or function(o) return o end
 clonefunction = clonefunction or function(f) return f end
 -- =======================================
 
-local Library -- shared reference for NotificationCenter & hooks
+if game.PlaceId ~= 6961824067 then
+	game:GetService("Players").LocalPlayer:Kick("ASTRA SCRIPT")
+	return
+end
 
-if true then
-	local n13 = 0
+if getgenv()._SCRIPT_LOADED then
+	warn("ASTRA is already loaded! Unload the current script to run it again.")
+	return
+end
+getgenv()._SCRIPT_LOADED = true
 
-	getgenv()._NOTIFICATION_CENTER = {
-		enabled = true,
-		SendNotif = function(self, arg2, arg3, arg4, arg5, soundId, volume, arg6)
-			if not self.enabled then
-				return false
-			end
-			n13 += 1
-			local str2 = "NC_" .. n13
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local CoreGui = game:GetService("CoreGui")
+local TextService = game:GetService("TextService")
+local Debris = game:GetService("Debris")
 
-			if soundId then
-				pcall(function()
-					local sound = Instance.new("Sound")
-					sound.SoundId = soundId
-					sound.Volume = volume or 1.5
-					sound.RollOffMaxDistance = 0
-					sound.Parent = workspace
-					sound:Play()
-					local Debris = game:GetService("Debris")
-					local addItem = Debris.AddItem
-					local v26 = arg6
-					local n14
+local localPlayer = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() and Players.LocalPlayer
+local localPlayer2 = localPlayer
 
-					if arg6 then
-						n14 = v26
-					else
-						n14 = 2
-					end
+local defaultColors = {
+	MainColor = "121212",
+	FontFace = "Gotham",
+	AccentColor = "007aff",
+	OutlineColor = "252528",
+	BackgroundColor = "0c0c0c",
+	FontColor = "c1cdcd",
+}
+getgenv()._DEFAULT_COLORS = defaultColors
 
-					addItem(Debris, sound, n14)
-				end)
-			end
+local Library
+local n13 = 0
 
-			if Library and Library.Notify then
-				pcall(function()
-					_G._suppressNextNotifSound = true
+getgenv()._NOTIFICATION_CENTER = {
+	enabled = true,
+	SendNotif = function(self, title, desc, icon, duration, soundId, volume, soundLifetime)
+		if not self.enabled then
+			return false
+		end
+		n13 += 1
+		local notifId = "NC_" .. n13
 
-					Library:Notify({
-						Title = arg2 or "Notification",
-						Description = arg3 or "No description",
-						BigIcon = arg4 or "rbxassetid://104599341811828",
-						Time = arg5 or 2.5,
-					})
+		if soundId then
+			pcall(function()
+				local sound = Instance.new("Sound")
+				sound.SoundId = soundId
+				sound.Volume = volume or 1.5
+				sound.RollOffMaxDistance = 0
+				sound.Parent = workspace
+				sound:Play()
+				Debris:AddItem(sound, soundLifetime or 2)
+			end)
+		end
 
-					_G._suppressNextNotifSound = true
-				end)
-			end
+		if Library and Library.Notify then
+			pcall(function()
+				_G._suppressNextNotifSound = true
+				Library:Notify({
+					Title = title or "Notification",
+					Description = desc or "No description",
+					BigIcon = icon or "rbxassetid://104599341811828",
+					Time = duration or 2.5,
+				})
+				_G._suppressNextNotifSound = true
+			end)
+		end
 
-			return str2
-		end,
-	}
+		return notifId
+	end,
+}
 
-	if getgenv()._SCRIPT_LOADED then
-		getgenv()._NOTIFICATION_CENTER:SendNotif(
-			"ASTRA",
-			"Already loaded! Unload the current script to run it again.",
-			"rbxassetid://104599341811828",
-			3,
-			"rbxassetid://97643101798871",
-			0.8,
-			1
-		)
-		return
-	end
-	getgenv()._SCRIPT_LOADED = true
+task.spawn(function()
+	pcall(function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/7Savitar/Obsidian/refs/heads/main/infyield.txt"))()
+	end)
+end)
 
-	local defaultColors = {
-		MainColor = "121212",
-		FontFace = "Gotham",
-		AccentColor = "007aff",
-		OutlineColor = "252528",
-		BackgroundColor = "0c0c0c",
-		FontColor = "c1cdcd",
-	}
-
-	getgenv()._DEFAULT_COLORS = defaultColors
-	if game.PlaceId ~= 6961824067 then
-		game:GetService("Players").LocalPlayer:Kick("ASTRA SCRIPT")
-		return
-	end
-
-	task.spawn(function()
+task.spawn(function()
+	while true do
+		task.wait(60)
 		pcall(function()
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/7Savitar/Obsidian/refs/heads/main/infyield.txt"))()
+			collectgarbage("step", 200)
 		end)
+	end
+end)
+
+-- ===== DESYNC SYSTEM =====
+local desync = {
+	enabled = false,
+	loc = CFrame.new(),
+	isOffsetted = false,
+	_requestActive = false,
+	_targetCFFunc = nil,
+	_requestTimeout = 5,
+	_requestStartTime = 0,
+	_spinConn = nil,
+	serverCF = nil,
+}
+
+local function startDesyncSpin()
+	if desync._spinConn then return end
+	desync._spinConn = RunService.Heartbeat:Connect(function()
+		local char = localPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp and desync.enabled then
+			hrp.AssemblyAngularVelocity = Vector3.new(0, 0.01, 0)
+		end
 	end)
+end
 
-	task.spawn(function()
-		while true do
-			task.wait(60)
-
-			pcall(function()
-				collectgarbage("step", 200)
-			end)
+local function stopDesyncSpin()
+	task.delay(5, function()
+		if desync._spinConn and not desync.enabled then
+			desync._spinConn:Disconnect()
+			desync._spinConn = nil
 		end
 	end)
+end
 
-	local v26 = queue_on_teleport
+function desync:GetServerCFrame()
+	local char = localPlayer.Character
+	local hrp = char and (char:FindFirstChild("saviHRP") or char:FindFirstChild("HumanoidRootPart"))
+	if not hrp then return nil end
 
-	if v26 then
-		_qot = v26
-		local RunService = game:GetService("RunService")
-		local localPlayer = game:GetService("Players").LocalPlayer
-
-		local desync = {
-			enabled = false,
-			loc = CFrame.new(),
-			isOffsetted = false,
-			_requestActive = false,
-			_targetCFFunc = nil,
-			_requestTimeout = 5,
-			_requestStartTime = 0,
-			_spinConn = nil,
-			serverCF = nil,
-		}
-
-		_DS_startSpin = function()
-			if desync._spinConn then
-				return
+	if self.enabled then
+		if self._requestActive and self._targetCFFunc then
+			local ok, result = pcall(self._targetCFFunc)
+			if ok and typeof(result) == "CFrame" then
+				return result
 			end
-
-			desync._spinConn = RunService.Heartbeat:Connect(function()
-				local character = localPlayer.Character
-				character = character and character:FindFirstChild("HumanoidRootPart")
-
-				if character and desync.enabled then
-					character.AssemblyAngularVelocity = Vector3.new(0, 0.01, 0)
-				end
-			end)
 		end
-
-		_DS_stopSpin = function()
-			task.delay(5, function()
-				if desync._spinConn and not desync.enabled then
-					desync._spinConn:Disconnect()
-					desync._spinConn = nil
-				end
-			end)
+		if self.serverCF and typeof(self.serverCF) == "CFrame" then
+			return self.serverCF
 		end
+	end
+	return hrp.CFrame
+end
 
-		desync.GetServerCFrame = function(arg)
-			local character = localPlayer.Character
+function desync:RequestDesync(targetCFFunc, requestTimeout)
+	if self._requestActive then return false end
+	self._requestActive = true
+	self._targetCFFunc = targetCFFunc
+	self._requestTimeout = requestTimeout or 5
+	self._requestStartTime = tick()
 
-			if character then
-				character = character:FindFirstChild("saviHRP") or character:FindFirstChild("HumanoidRootPart")
-			end
-
-			if not character then
-				return nil
-			end
-
-			if arg.enabled then
-				if arg._requestActive and arg._targetCFFunc then
-					local ok, result = pcall(arg._targetCFFunc)
-					if ok and typeof(result) == "CFrame" then
-						return result
-					end
-				end
-
-				if arg.serverCF and typeof(arg.serverCF) == "CFrame" then
-					return arg.serverCF
-				end
-			end
-
-			return character.CFrame
+	if not self.enabled then
+		self.enabled = true
+		startDesyncSpin()
+		local char = localPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			self.loc = hrp.CFrame
+			self.isOffsetted = false
 		end
+	end
+	return true
+end
 
-		desync.RequestDesync = function(arg, targetCFFunc, requestTimeout)
-			if arg._requestActive then
-				return false
-			end
-			arg._requestActive = true
-			arg._targetCFFunc = targetCFFunc
-			arg._requestTimeout = requestTimeout or 5
-			arg._requestStartTime = tick()
+function desync:CancelRequest()
+	if not self._requestActive then return end
+	self._requestActive = false
+	self._targetCFFunc = nil
+	self.serverCF = nil
+	local char = localPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if hrp and self.isOffsetted then
+		hrp.CFrame = self.loc
+	end
+	self.isOffsetted = false
+	self.enabled = false
+	stopDesyncSpin()
+end
 
-			if not arg.enabled then
-				arg.enabled = true
-				_DS_startSpin()
-				local character = localPlayer.Character
-				character = character and character:FindFirstChild("HumanoidRootPart")
+function desync:IsAvailable()
+	return not self._requestActive
+end
 
-				if character then
-					arg.loc = character.CFrame
-					arg.isOffsetted = false
-				end
-			end
-
-			return true
-		end
-
-		desync.CancelRequest = function(arg)
-			if not arg._requestActive then
-				return
-			end
-			arg._requestActive = false
-			arg._targetCFFunc = nil
-			arg.serverCF = nil
-			local character = localPlayer.Character
-			character = character and character:FindFirstChild("HumanoidRootPart")
-
-			if character and arg.isOffsetted then
-				character.CFrame = arg.loc
-			end
-
-			arg.isOffsetted = false
-			arg.enabled = false
-			_DS_stopSpin()
-		end
-
-		desync.IsAvailable = function(arg)
-			return not arg._requestActive
-		end
-
-		RunService.Stepped:Connect(function()
-			if desync.enabled and desync.isOffsetted and localPlayer.Character then
-				local humanoidRootPart = localPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-				if humanoidRootPart and desync.loc then
-					humanoidRootPart.CFrame = desync.loc
-					desync.isOffsetted = false
-				end
-			end
-		end)
-
-		RunService:BindToRenderStep("_GlobalDesyncCamFix", 0, function()
-			if desync.enabled and desync.isOffsetted and localPlayer.Character then
-				local humanoidRootPart = localPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-				if humanoidRootPart and desync.loc then
-					humanoidRootPart.CFrame = desync.loc
-					desync.isOffsetted = false
-				end
-			end
-		end)
-
-		RunService.Heartbeat:Connect(function()
-			if not desync.enabled or not localPlayer.Character then
-				return
-			end
-			local humanoidRootPart = localPlayer.Character:FindFirstChild("HumanoidRootPart")
-			if not humanoidRootPart then
-				return
-			end
-			desync.loc = humanoidRootPart.CFrame
-
-			if desync._requestActive and desync._requestStartTime then
-				local requestStartTime = desync._requestStartTime
-				if desync._requestTimeout <= tick() - requestStartTime then
-					desync:CancelRequest()
-					return
-				end
-			end
-
-			if desync._requestActive and desync._targetCFFunc then
-				local ok, cFrame = pcall(desync._targetCFFunc)
-
-				if ok and cFrame then
-					humanoidRootPart.CFrame = cFrame
-					desync.serverCF = cFrame
-					desync.isOffsetted = true
-				end
-			end
-		end)
-
-		localPlayer.CharacterAdded:Connect(function(character)
-			task.wait(0.1)
-			desync.loc = character:WaitForChild("HumanoidRootPart").CFrame
+RunService.Stepped:Connect(function()
+	if desync.enabled and desync.isOffsetted and localPlayer.Character then
+		local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp and desync.loc then
+			hrp.CFrame = desync.loc
 			desync.isOffsetted = false
-			desync.serverCF = nil
+		end
+	end
+end)
 
-			if desync._requestActive then
-				desync._requestActive = false
-				desync._targetCFFunc = nil
-				desync.enabled = false
-				_DS_stopSpin()
-			end
-		end)
+RunService:BindToRenderStep("_GlobalDesyncCamFix", 0, function()
+	if desync.enabled and desync.isOffsetted and localPlayer.Character then
+		local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp and desync.loc then
+			hrp.CFrame = desync.loc
+			desync.isOffsetted = false
+		end
+	end
+end)
 
-		getgenv()._DESYNC = desync
+RunService.Heartbeat:Connect(function()
+	if not desync.enabled or not localPlayer.Character then return end
+	local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	desync.loc = hrp.CFrame
 
-		task.spawn(function()
-			pcall(function()
-				local grabEvents = game:GetService("ReplicatedStorage"):WaitForChild("GrabEvents", 15)
-				local endGrabEarly = grabEvents:FindFirstChild("EndGrabEarly")
+	if desync._requestActive and desync._requestStartTime then
+		if desync._requestTimeout <= tick() - desync._requestStartTime then
+			desync:CancelRequest()
+			return
+		end
+	end
 
-				if endGrabEarly then
-					endGrabEarly:Destroy()
-				end
+	if desync._requestActive and desync._targetCFFunc then
+		local ok, cf = pcall(desync._targetCFFunc)
+		if ok and typeof(cf) == "CFrame" then
+			hrp.CFrame = cf
+			desync.serverCF = cf
+			desync.isOffsetted = true
+		end
+	end
+end)
 
-				local remoteEvent = Instance.new("RemoteEvent")
-				remoteEvent.Name = "EndGrabEarly"
-				remoteEvent.Parent = grabEvents
+localPlayer.CharacterAdded:Connect(function(char)
+	task.wait(0.1)
+	local hrp = char:WaitForChild("HumanoidRootPart", 10)
+	if hrp then
+		desync.loc = hrp.CFrame
+	end
+	desync.isOffsetted = false
+	desync.serverCF = nil
+	if desync._requestActive then
+		desync._requestActive = false
+		desync._targetCFFunc = nil
+		desync.enabled = false
+		stopDesyncSpin()
+	end
+end)
 
-				remoteEvent.OnClientEvent:Connect(function()
-				end)
-			end)
-		end)
+getgenv()._DESYNC = desync
 
-		local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
-		Library = lib
-		lib.CornerRadius = 15
-		lib.Scheme.BackgroundColor = Color3.fromHex(defaultColors.BackgroundColor)
-		lib.Scheme.MainColor = Color3.fromHex(defaultColors.MainColor)
-		lib.Scheme.AccentColor = Color3.fromHex(defaultColors.AccentColor)
-		lib.Scheme.OutlineColor = Color3.fromHex(defaultColors.OutlineColor)
-		lib.Scheme.FontColor = Color3.fromHex(defaultColors.FontColor)
+-- ===== OBSIDIAN LIBRARY SETUP =====
+local okLib, lib = pcall(function()
+	return loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
+end)
 
-		_applyCornerRadius = function(arg)
-			local cornerRadius = tonumber(arg) or 15
-			lib.CornerRadius = cornerRadius
-			local screenGui = lib.ScreenGui
+if not okLib or type(lib) ~= "table" then
+	warn("ASTRA: Failed to load Obsidian Library:", tostring(lib))
+	return
+end
 
-			if screenGui then
-				for _, descendant in pairs(screenGui:GetDescendants()) do
-					if descendant:IsA("UICorner") then
-						if descendant.CornerRadius.Scale == 0 then
-							descendant.CornerRadius = UDim.new(0, cornerRadius)
-						end
-					end
-				end
-			end
+Library = lib
+lib.CornerRadius = 15
+lib.Scheme.BackgroundColor = Color3.fromHex(defaultColors.BackgroundColor)
+lib.Scheme.MainColor = Color3.fromHex(defaultColors.MainColor)
+lib.Scheme.AccentColor = Color3.fromHex(defaultColors.AccentColor)
+lib.Scheme.OutlineColor = Color3.fromHex(defaultColors.OutlineColor)
+lib.Scheme.FontColor = Color3.fromHex(defaultColors.FontColor)
+lib.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
 
-			if _wmCorner then
-				_wmCorner.CornerRadius = UDim.new(0, cornerRadius)
+local function applyCornerRadius(radius)
+	local r = tonumber(radius) or 15
+	lib.CornerRadius = r
+	if lib.ScreenGui then
+		for _, desc in ipairs(lib.ScreenGui:GetDescendants()) do
+			if desc:IsA("UICorner") and desc.CornerRadius.Scale == 0 then
+				desc.CornerRadius = UDim.new(0, r)
 			end
 		end
+	end
+	if _wmCorner then
+		_wmCorner.CornerRadius = UDim.new(0, r)
+	end
+end
+_applyCornerRadius = applyCornerRadius
 
-		local getCustomIcon = lib.GetCustomIcon
-
-		lib.GetCustomIcon = function(arg, arg2)
-			if type(arg2) == "number" or tonumber(arg2) then
-				return {
-					Url = string.format("rbxthumb://type=Asset&id=%.0f&w=150&h=150", tonumber(arg2)),
-					ImageRectOffset = Vector2.zero,
-					ImageRectSize = Vector2.zero,
-					Custom = nil,
-				}
-			end
-
-			return getCustomIcon(arg, arg2)
-		end
-
-		local TweenService = game:GetService("TweenService")
-
-		local tbl5 = {
-			Home = 1,
-			Player = 2,
-			Defence = 3,
-			Miscellaneous = 4,
-			Combat = 4,
-			Target = 5,
-			Blobman = 6,
-			Pose = 7,
-			Aim = 8,
-			AimActivity = 8,
-			Keybinds = 9,
-			ESP = 10,
-			NewESP = 10,
-			Visual = 11,
-			ShaderMap = 11,
-			AimTrainer = 12,
-			Whitelist = 13,
-			Settings = 14,
-			Server = 15,
+local origGetCustomIcon = lib.GetCustomIcon
+lib.GetCustomIcon = function(self, iconName, arg2)
+	local candidate = arg2 ~= nil and arg2 or iconName
+	if type(candidate) == "number" or tonumber(candidate) then
+		return {
+			Url = string.format("rbxthumb://type=Asset&id=%.0f&w=150&h=150", tonumber(candidate)),
+			ImageRectOffset = Vector2.zero,
+			ImageRectSize = Vector2.zero,
+			Custom = nil,
 		}
-
-		local n14 = 1
-		local sound = Instance.new("Sound")
-		sound.Name = "AstraTabWhoosh"
-		sound.SoundId = "rbxassetid://138158731526545"
-		sound.Volume = 0.12
-		sound.PlaybackSpeed = 1.35
-		sound.RollOffMaxDistance = 0
-		local SoundService = game:GetService("SoundService")
-
-		if SoundService then
-			sound.Parent = SoundService
-			_G._initialTabLoaded = false
-
-			task.delay(0.8, function()
-				_G._initialTabLoaded = true
-			end)
-
-			local function isAdditionalFeatureEnabled(arg)
-				local additionalFeaturesDropdown = lib and lib.Options and lib.Options.AdditionalFeaturesDropdown
-				if not additionalFeaturesDropdown then
-					return true
-				end
-
-				if type(additionalFeaturesDropdown.Value) == "table" then
-					return additionalFeaturesDropdown.Value[arg] == true
-				end
-
-				if type(additionalFeaturesDropdown.Value) == "string" then
-					return additionalFeaturesDropdown.Value == arg
-				end
-				return false
-			end
-
-			_G._isAdditionalFeatureEnabled = isAdditionalFeatureEnabled
-			local n15 = 0
-
-			_G._playTabWhoosh = function()
-				if not _G._initialTabLoaded then
-					return
-				end
-
-				if not isAdditionalFeatureEnabled("Tab Swap Sound") then
-					return
-				end
-
-				if tick() - n15 < 0.1 then
-					return
-				end
-				n15 = tick()
-
-				pcall(function()
-					sound.TimePosition = 0
-					sound:Play()
-				end)
-			end
-
-			local function fn14(arg)
-				if not arg then
-					return nil
-				end
-				local iconCache = arg._iconCache
-				if iconCache and iconCache.Parent then
-					return iconCache
-				end
-				local button = arg.Button
-				if not button then
-					return nil
-				end
-				local imageLabel = button:FindFirstChildWhichIsA("ImageLabel", true)
-
-				if imageLabel then
-					arg._iconCache = imageLabel
-				end
-
-				return imageLabel
-			end
-
-			local function fn15(arg, arg2)
-				if not isAdditionalFeatureEnabled("Tab Icon Bounce") then
-					return
-				end
-				local v27 = fn14(arg)
-				if not v27 then
-					return
-				end
-
-				if arg._iconBounceTween then
-					arg._iconBounceTween:Cancel()
-					arg._iconBounceTween = nil
-				end
-
-				local astraIconScale = v27:FindFirstChild("__AstraIconScale__")
-
-				if not astraIconScale then
-					astraIconScale = Instance.new("UIScale")
-					astraIconScale.Name = "__AstraIconScale__"
-					astraIconScale.Scale = 1
-					astraIconScale.Parent = v27
-				end
-
-				if arg2 then
-					astraIconScale.Scale = 1.18
-					local tween = TweenService:Create(astraIconScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-					arg._iconBounceTween = tween
-					tween:Play()
-				else
-					astraIconScale.Scale = 0.72
-					local tween = TweenService:Create(astraIconScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-					arg._iconBounceTween = tween
-					tween:Play()
-				end
-			end
-
-			local tbl6 = {}
-
-			local function fn16(arg)
-				local v27 = tbl6[arg]
-				if v27 and v27.Button and v27.Button.Parent then
-					return v27
-				end
-
-				if lib and lib.Tabs then
-					for k, tab in pairs(lib.Tabs) do
-						local v28 = tbl5[tostring(k):gsub("<[^>]->", "")] or tbl5[k]
-
-						if v28 and typeof(tab) == "table" and tab.Button then
-							tbl6[v28] = tab
-						end
-					end
-				end
-
-				return tbl6[arg]
-			end
-
-			local tbl7 = {}
-			local tbl8 = {}
-
-			local function fn17()
-				for _, v27 in ipairs(tbl7) do
-					pcall(task.cancel, v27)
-				end
-
-				table.clear(tbl7)
-
-				for _, v27 in ipairs(tbl8) do
-					if v27.tweens then
-						for _, tween in ipairs(v27.tweens) do
-							pcall(function()
-								tween:Cancel()
-							end)
-						end
-					end
-
-					if v27.conns then
-						for _, conn in ipairs(v27.conns) do
-							pcall(function()
-								conn:Disconnect()
-							end)
-						end
-					end
-
-					if v27.icon and v27.icon.Parent then
-						pcall(function()
-							v27.icon.Rotation = 0
-						end)
-					end
-
-					if v27.scale and v27.scale.Parent then
-						pcall(function()
-							v27.scale.Scale = 1
-						end)
-					end
-				end
-
-				table.clear(tbl8)
-			end
-
-			local function fn18(arg)
-				if not arg then
-					return
-				end
-				local v27 = fn14(arg)
-				if not v27 or not v27.Parent then
-					return
-				end
-				local astraScale = arg._astraScale
-
-				if not (astraScale and astraScale.Parent == v27) then
-					astraScale = v27:FindFirstChild("__AstraIconScale__")
-
-					if not astraScale then
-						astraScale = Instance.new("UIScale")
-						astraScale.Name = "__AstraIconScale__"
-						astraScale.Scale = 1
-						astraScale.Parent = v27
-					end
-
-					arg._astraScale = astraScale
-				end
-
-				local tbl9 = { icon = v27, scale = astraScale, tweens = {}, conns = {} }
-				table.insert(tbl8, tbl9)
-				local n16 = math.random(1, 4)
-				local n17 = math.random() > 0.5 and 1 or -1
-
-				if n16 == 1 then
-					local n18 = n17 * (3.6 + math.random() * 2.6)
-					local n19 = 1.07 + math.random() * 0.05
-					local n20 = 0.22 + math.random() * 0.05
-					local tweenInfo = TweenInfo.new(0.045, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-					local tweenInfo2 = TweenInfo.new(n20, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-					local tween = TweenService:Create(v27, tweenInfo, { Rotation = n18 })
-					local tween2 = TweenService:Create(astraScale, tweenInfo, { Scale = n19 })
-					table.insert(tbl9.tweens, tween)
-					table.insert(tbl9.tweens, tween2)
-					local connection = nil
-
-					connection = tween.Completed:Connect(function()
-						if connection then
-							connection:Disconnect()
-						end
-
-						if not (v27.Parent and astraScale.Parent) then
-							return
-						end
-						local tween3 = TweenService:Create(v27, tweenInfo2, { Rotation = 0 })
-						local tween4 = TweenService:Create(astraScale, tweenInfo2, { Scale = 1 })
-						table.insert(tbl9.tweens, tween3)
-						table.insert(tbl9.tweens, tween4)
-						tween3:Play()
-						tween4:Play()
-					end)
-
-					table.insert(tbl9.conns, connection)
-					tween:Play()
-					tween2:Play()
-				elseif n16 == 2 then
-					local n18 = n17 * (3.4 + math.random() * 2)
-					local n19 = -n18 * (0.55 + math.random() * 0.25)
-					local n20 = 1.08 + math.random() * 0.04
-					local tweenInfo = TweenInfo.new(0.04, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-					local tweenInfo2 = TweenInfo.new(0.065, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-					local tweenInfo3 = TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-					local tween = TweenService:Create(v27, tweenInfo, { Rotation = n18 })
-					local tween2 = TweenService:Create(astraScale, tweenInfo, { Scale = n20 })
-					table.insert(tbl9.tweens, tween)
-					table.insert(tbl9.tweens, tween2)
-					local connection = nil
-
-					connection = tween.Completed:Connect(function()
-						if connection then
-							connection:Disconnect()
-						end
-
-						if not (v27.Parent and astraScale.Parent) then
-							return
-						end
-						local tween3 = TweenService:Create(v27, tweenInfo2, { Rotation = n19 })
-						table.insert(tbl9.tweens, tween3)
-						local connection2 = nil
-
-						connection2 = tween3.Completed:Connect(function()
-							if connection2 then
-								connection2:Disconnect()
-							end
-
-							if not (v27.Parent and astraScale.Parent) then
-								return
-							end
-							local tween4 = TweenService:Create(v27, tweenInfo3, { Rotation = 0 })
-							local tween5 = TweenService:Create(astraScale, tweenInfo3, { Scale = 1 })
-							table.insert(tbl9.tweens, tween4)
-							table.insert(tbl9.tweens, tween5)
-							tween4:Play()
-							tween5:Play()
-						end)
-
-						table.insert(tbl9.conns, connection2)
-						tween3:Play()
-					end)
-
-					table.insert(tbl9.conns, connection)
-					tween:Play()
-					tween2:Play()
-				elseif n16 == 3 then
-					local n18 = n17 * (1.6 + math.random() * 1.8)
-					local n19 = 1.11 + math.random() * 0.04
-					local n20 = 0.24 + math.random() * 0.04
-					local tweenInfo = TweenInfo.new(0.04, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-					local tweenInfo2 = TweenInfo.new(n20, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-					local tween = TweenService:Create(v27, tweenInfo, { Rotation = n18 })
-					local tween2 = TweenService:Create(astraScale, tweenInfo, { Scale = n19 })
-					table.insert(tbl9.tweens, tween)
-					table.insert(tbl9.tweens, tween2)
-					local connection = nil
-
-					connection = tween2.Completed:Connect(function()
-						if connection then
-							connection:Disconnect()
-						end
-
-						if not (v27.Parent and astraScale.Parent) then
-							return
-						end
-						local tween3 = TweenService:Create(v27, tweenInfo2, { Rotation = 0 })
-						local tween4 = TweenService:Create(astraScale, tweenInfo2, { Scale = 1 })
-						table.insert(tbl9.tweens, tween3)
-						table.insert(tbl9.tweens, tween4)
-						tween3:Play()
-						tween4:Play()
-					end)
-
-					table.insert(tbl9.conns, connection)
-					tween:Play()
-					tween2:Play()
-				else
-					local n18 = n17 * (2.8 + math.random() * 2.4)
-					local n19 = 0.94 - math.random() * 0.03
-					local n20 = 0.23 + math.random() * 0.05
-					local tweenInfo = TweenInfo.new(0.045, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-					local tweenInfo2 = TweenInfo.new(n20, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-					local tween = TweenService:Create(v27, tweenInfo, { Rotation = n18 })
-					local tween2 = TweenService:Create(astraScale, tweenInfo, { Scale = n19 })
-					table.insert(tbl9.tweens, tween)
-					table.insert(tbl9.tweens, tween2)
-					local connection = nil
-
-					connection = tween2.Completed:Connect(function()
-						if connection then
-							connection:Disconnect()
-						end
-
-						if not (v27.Parent and astraScale.Parent) then
-							return
-						end
-						local tween3 = TweenService:Create(v27, tweenInfo2, { Rotation = 0 })
-						local tween4 = TweenService:Create(astraScale, tweenInfo2, { Scale = 1 })
-						table.insert(tbl9.tweens, tween3)
-						table.insert(tbl9.tweens, tween4)
-						tween3:Play()
-						tween4:Play()
-					end)
-
-					table.insert(tbl9.conns, connection)
-					tween:Play()
-					tween2:Play()
-				end
-			end
-
-			local function fn19(arg, arg2)
-				if not isAdditionalFeatureEnabled("Tab Icon Bounce") then
-					return
-				end
-
-				if not _G._initialTabLoaded then
-					return
-				end
-
-				if not arg or not arg2 or arg == arg2 then
-					return
-				end
-				local n16 = math.abs(arg2 - arg)
-				if n16 <= 1 then
-					return
-				end
-				fn17()
-				local n17 = arg2 > arg and 1 or -1
-				local n18 = n16 - 1
-				local n19 = 0
-
-				for i = arg + n17, arg2 - n17, n17 do
-					n19 += 1
-					local v27 = fn16(i)
-
-					if v27 then
-						local thread = task.delay(math.max(0, math.pow(n19 / (n18 + 1), 0.84) * 0.24 + (math.random() - 0.5) * 0.007), function()
-							fn18(v27)
-						end)
-
-						table.insert(tbl7, thread)
-					end
-				end
-			end
-
-			local function fn20(arg)
-				if arg._iconBounceTween then
-					arg._iconBounceTween:Cancel()
-					arg._iconBounceTween = nil
-				end
-
-				local v27 = fn14(arg)
-				if not v27 then
-					return
-				end
-				local astraIconScale = v27:FindFirstChild("__AstraIconScale__")
-
-				if astraIconScale and astraIconScale.Scale ~= 1 then
-					astraIconScale.Scale = 1
-				end
-
-				if v27.Rotation ~= 0 then
-					v27.Rotation = 0
-				end
-			end
-
-			lib.PlayTabAnimation = function(arg, arg2, visible)
-				local container
-
-				if arg2 then
-					container = arg2.Container or arg2.TabContainer
-				else
-					container = arg2
-				end
-
-				if not container then
-					return
-				end
-				local zIndex = container.ZIndex or 1
-				local smoothTabSwap = isAdditionalFeatureEnabled("Smooth Tab Swap")
-				local name = arg2.Name or ""
-				local v27 = tbl5[name:gsub("<[^>]->", "")] or tbl5[name] or n14
-
-				if not (lib.Animations and lib.Animations.TabSwitch and smoothTabSwap) then
-					container.Visible = visible
-					container.Position = UDim2.fromScale(0, 0)
-					container.ZIndex = zIndex
-
-					if visible and v27 ~= n14 and _G._initialTabLoaded then
-						local v28 = n14
-						n14 = v27
-
-						if _G._playTabWhoosh then
-							_G._playTabWhoosh()
-						end
-
-						fn19(v28, v27)
-						fn15(arg2, false)
-					elseif visible then
-						n14 = v27
-						fn15(arg2, false)
-					else
-						fn20(arg2)
-					end
-
-					return
-				end
-
-				if visible then
-					if v27 == n14 and _G._initialTabLoaded then
-						container.Visible = true
-						container.Position = UDim2.fromScale(0, 0)
-						container.ZIndex = zIndex
-						fn15(arg2, true)
-						return
-					end
-
-					if _G._playTabWhoosh then
-						_G._playTabWhoosh()
-					end
-
-					local tabSwipeOffset = lib.TabSwipeOffset or 24
-					local n16 = v27 >= n14 and -tabSwipeOffset or tabSwipeOffset
-					local v28 = n14
-					n14 = v27
-
-					if v28 and v28 ~= v27 and _G._initialTabLoaded then
-						fn19(v28, v27)
-					end
-
-					fn15(arg2, false)
-					local udim2 = UDim2.fromOffset(0, n16)
-					container.ZIndex = zIndex + 1
-					container.Position = udim2
-					container.Visible = true
-
-					if arg2._currentSwipeTween then
-						arg2._currentSwipeTween:Cancel()
-						arg2._currentSwipeTween = nil
-					end
-
-					local tween = TweenService:Create(container, lib.TabTransitionInfo or TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0, 0) })
-					arg2._currentSwipeTween = tween
-					tween:Play()
-					local connection = nil
-
-					connection = tween.Completed:Connect(function()
-						if connection then
-							connection:Disconnect()
-						end
-
-						container.ZIndex = zIndex
-						arg2._currentSwipeTween = nil
-					end)
-				else
-					fn20(arg2)
-
-					if arg2._currentSwipeTween then
-						arg2._currentSwipeTween:Cancel()
-						arg2._currentSwipeTween = nil
-					end
-
-					container.Visible = false
-					container.Position = UDim2.fromScale(0, 0)
-					container.ZIndex = zIndex
-				end
-			end
-
-			_G.SmoothMenuDrag = false
-
-			lib.MakeDraggable = function(arg, arg2, arg3, arg4, arg5)
-				local UserInputService = game:GetService("UserInputService")
-				local TweenService2 = game:GetService("TweenService")
-				local position = nil
-				local position2 = nil
-				local flag10 = false
-				local connection = nil
-				local tween = nil
-
-				local connection2 = arg3.InputBegan:Connect(function(input)
-					local flag11 = not ((input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and input.UserInputState == Enum.UserInputState.Begin)
-					local cantDragForced
-
-					if flag11 then
-						cantDragForced = flag11
-					else
-						local v27 = arg5
-
-						if arg5 then
-							cantDragForced = lib.CantDragForced
-						else
-							cantDragForced = v27
-						end
-					end
-
-					if cantDragForced then
-						return
-					end
-					position = input.Position
-					position2 = arg2.Position
-					flag10 = true
-
-					connection = input.Changed:Connect(function()
-						if input.UserInputState ~= Enum.UserInputState.End then
-							return
-						end
-						flag10 = false
-
-						if connection and connection.Connected then
-							connection:Disconnect()
-							connection = nil
-						end
-					end)
-				end)
-
-				local connection3 = UserInputService.InputChanged:Connect(function(input)
-					local cantDragForced = not arg4 and not lib.Toggled or arg5 and lib.CantDragForced
-
-					if not cantDragForced then
-						cantDragForced = not (lib.ScreenGui and lib.ScreenGui.Parent)
-					end
-
-					if cantDragForced then
-						flag10 = false
-
-						if connection and connection.Connected then
-							connection:Disconnect()
-							connection = nil
-						end
-
-						return
-					end
-
-					local flag11 = input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch
-					local v27 = flag10
-
-					if not flag10 then
-						flag11 = v27
-					end
-
-					if flag11 then
-						local n16 = input.Position - position
-						local udim2 = UDim2.new(position2.X.Scale, position2.X.Offset + n16.X, position2.Y.Scale, position2.Y.Offset + n16.Y)
-
-						if _G.SmoothMenuDrag then
-							if tween then
-								tween:Cancel()
-							end
-
-							tween = TweenService2:Create(arg2, TweenInfo.new(0.16, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { Position = udim2 })
-							tween:Play()
-						else
-							arg2.Position = udim2
-						end
-					end
-				end)
-
-				if lib.GiveSignal then
-					lib:GiveSignal(connection3)
-					lib:GiveSignal(connection2)
-				end
-
-				arg2.Destroying:Once(function()
-					if connection3 and connection3.Connected then
-						connection3:Disconnect()
-					end
-
-					if connection2 and connection2.Connected then
-						connection2:Disconnect()
-					end
-
-					if connection and connection.Connected then
-						connection:Disconnect()
-					end
-
-					if tween then
-						tween:Cancel()
-						tween = nil
-					end
-				end)
-			end
-
-			local lib2 = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/SaveManager.lua"))()
-			local v27 = cloneref
-
-			if v27 then
-				local v28 = clonefunction
-
-				if v28 then
-					local v29 = v27(game:GetService("HttpService"))
-					local v30 = isfolder
-					local v31 = isfile
-					local v32 = listfiles
-
-					if true then
-						local tbl9 = {
-							"FontColor",
-							"MainColor",
-							"AccentColor",
-							"BackgroundColor",
-							"OutlineColor",
-						}
-
-						local obsidianThemeManager
-
-						obsidianThemeManager = {
-							Folder = "AstraLibSettings",
-							Library = nil,
-							AppliedToTab = false,
-							BuiltInThemes = {
-								Default = {
-									1,
-									{
-										FontColor = "c1cdcd",
-										MainColor = "121212",
-										AccentColor = "007aff",
-										BackgroundColor = "0c0c0c",
-										OutlineColor = "252528",
-									},
-								},
-								BBot = {
-									2,
-									{
-										FontColor = "ffffff",
-										MainColor = "1e1e1e",
-										AccentColor = "7e48a3",
-										BackgroundColor = "232323",
-										OutlineColor = "141414",
-									},
-								},
-							},
-							SetLibrary = function(arg, library)
-								arg.Library = library
-							end,
-							GetPaths = function(arg)
-								local tbl10 = {}
-								local parts = arg.Folder:split("/")
-
-								for i = 1, #parts do
-									tbl10[#tbl10 + 1] = table.concat(parts, "/", 1, i)
-								end
-
-								tbl10[#tbl10 + 1] = arg.Folder .. "/themes"
-								return tbl10
-							end,
-							BuildFolderTree = function(arg)
-								for _, v33 in ipairs(arg:GetPaths()) do
-									if not v30(v33) then
-										makefolder(v33)
-									end
-								end
-							end,
-							CheckFolderTree = function(arg)
-								if v30(arg.Folder) then
-									return
-								end
-								arg:BuildFolderTree()
-								task.wait(0.1)
-							end,
-							SetFolder = function(arg, folder2)
-								arg.Folder = folder2
-								arg:BuildFolderTree()
-							end,
-							ApplyTheme = function(arg, arg2)
-								local customTheme = arg:GetCustomTheme(arg2)
-								local v33 = customTheme or arg.BuiltInThemes[arg2]
-								if not v33 then
-									return
-								end
-								local v34 = v33[2]
-								local v35 = pairs
-								v34 = customTheme or v34
-
-								for k, v36 in v35(v34) do
-									if k ~= "VideoLink" then
-										if k == "FontFace" then
-											arg.Library:SetFont(Enum.Font[v36])
-
-											if arg.Library.Options[k] then
-												arg.Library.Options[k]:SetValue(v36)
-											end
-										else
-											arg.Library.Scheme[k] = Color3.fromHex(v36)
-
-											if arg.Library.Options[k] then
-												arg.Library.Options[k]:SetValueRGB(Color3.fromHex(v36))
-											end
-										end
-									end
-								end
-
-								arg:ThemeUpdate()
-							end,
-							ThemeUpdate = function(arg)
-								for _, v33 in tbl9, nil, nil do
-									if arg.Library.Options and arg.Library.Options[v33] then
-										arg.Library.Scheme[v33] = arg.Library.Options[v33].Value
-									end
-								end
-
-								arg.Library:UpdateColorsUsingRegistry()
-							end,
-							GetCustomTheme = function(arg, arg2)
-								local str2 = arg.Folder .. "/themes/" .. arg2 .. ".json"
-								if not v31(str2) then
-									return nil
-								end
-								local ok, result = pcall(v29.JSONDecode, v29, readfile(str2))
-								return ok and result or nil
-							end,
-							LoadDefault = function(arg)
-								local str2 = v31(arg.Folder .. "/themes/default.txt") and readfile(arg.Folder .. "/themes/default.txt")
-
-								if str2 then
-									if not arg.BuiltInThemes[str2] then
-										local str3 = "Default"
-
-										if not arg:GetCustomTheme(str2) then
-											str2 = str3
-										end
-									end
-								else
-									str2 = "Default"
-
-									if arg.BuiltInThemes[arg.DefaultTheme] then
-										str2 = arg.DefaultTheme
-									end
-								end
-
-								arg:ApplyTheme(str2)
-
-								if arg.Library.Options and arg.Library.Options.ThemeManager_ThemeList then
-									arg.Library.Options.ThemeManager_ThemeList:SetValue(str2)
-								end
-							end,
-							SaveDefault = function(arg, arg2)
-								writefile(arg.Folder .. "/themes/default.txt", arg2)
-							end,
-							SetDefaultTheme = function(arg, arg2)
-								assert(arg.Library, "Must set ThemeManager.Library first!")
-								assert(not arg.AppliedToTab, "Cannot set default theme after applying ThemeManager to a tab!")
-								local tbl10 = {}
-								local scheme = {}
-
-								for _, v33 in tbl9, nil, nil do
-									if typeof(arg2[v33]) == "Color3" then
-										tbl10[v33] = "#" .. arg2[v33]:ToHex()
-										scheme[v33] = arg2[v33]
-									elseif typeof(arg2[v33]) == "string" then
-										tbl10[v33] = arg2[v33]:sub(1, 1) == "#" and arg2[v33] or "#" .. arg2[v33]
-										scheme[v33] = Color3.fromHex(arg2[v33])
-									else
-										tbl10[v33] = obsidianThemeManager.BuiltInThemes.Default[2][v33]
-										scheme[v33] = Color3.fromHex(obsidianThemeManager.BuiltInThemes.Default[2][v33])
-									end
-								end
-
-								if typeof(arg2.FontFace) == "EnumItem" then
-									tbl10.FontFace = arg2.FontFace.Name
-									scheme.Font = Font.fromEnum(arg2.FontFace)
-								elseif typeof(arg2.FontFace) == "string" then
-									tbl10.FontFace = arg2.FontFace
-									scheme.Font = Font.fromEnum(Enum.Font[arg2.FontFace])
-								else
-									tbl10.FontFace = "Code"
-									scheme.Font = Font.fromEnum(Enum.Font.Code)
-								end
-
-								for _, v33 in { "RedColor", "DarkColor", "WhiteColor" }, nil, nil do
-									scheme[v33] = arg.Library.Scheme[v33]
-								end
-
-								arg.Library.Scheme = scheme
-								arg.BuiltInThemes.Default = { 1, tbl10 }
-								arg.Library:UpdateColorsUsingRegistry()
-							end,
-							SaveCustomTheme = function(arg, arg2)
-								if arg2:gsub(" ", "") == "" then
-									arg.Library:Notify("Invalid file name for theme (empty)", 3)
-									return
-								end
-								local tbl10 = {}
-
-								for _, v33 in tbl9, nil, nil do
-									tbl10[v33] = arg.Library.Options[v33].Value:ToHex()
-								end
-
-								tbl10.FontFace = arg.Library.Options.FontFace.Value
-								writefile(arg.Folder .. "/themes/" .. arg2 .. ".json", v29:JSONEncode(tbl10))
-							end,
-							Delete = function(arg, arg2)
-								if not arg2 then
-									return false, "no config file is selected"
-								end
-								local str2 = arg.Folder .. "/themes/" .. arg2 .. ".json"
-								if not v31(str2) then
-									return false, "invalid file"
-								end
-								local ok = pcall(delfile, str2)
-								return ok or false, not ok and "delete file error" or nil
-							end,
-							ReloadCustomThemes = function(arg)
-								local v33 = v32(arg.Folder .. "/themes")
-								local tbl10 = {}
-
-								for i = 1, #v33 do
-									local v34 = v33[i]
-
-									if v34:sub(-5) == ".json" then
-										local pos = v34:find(".json", 1, true)
-										local str2 = v34:sub(pos, pos)
-										local v35 = pos
-
-										while str2 ~= "/" and str2 ~= "\\" and str2 ~= "" do
-											v35 -= 1
-											str2 = v34:sub(v35, v35)
-										end
-
-										if str2 == "/" or str2 == "\\" then
-											table.insert(tbl10, v34:sub(v35 + 1, pos - 1))
-										end
-									end
-								end
-
-								return tbl10
-							end,
-							CreateThemeManager = function(arg, arg2)
-								arg2:AddLabel("Background color"):AddColorPicker("BackgroundColor", { Default = arg.Library.Scheme.BackgroundColor })
-								arg2:AddLabel("Main color"):AddColorPicker("MainColor", { Default = arg.Library.Scheme.MainColor })
-								arg2:AddLabel("Accent color"):AddColorPicker("AccentColor", { Default = arg.Library.Scheme.AccentColor })
-								arg2:AddLabel("Outline color"):AddColorPicker("OutlineColor", { Default = arg.Library.Scheme.OutlineColor })
-								arg2:AddLabel("Font color"):AddColorPicker("FontColor", { Default = arg.Library.Scheme.FontColor })
-
-								arg2:AddDropdown("FontFace", {
-									Text = "Font Face",
-									Default = "Gotham",
-									Values = { "Arial", "ArialBold", "BuilderSans", "Code", "Gotham", "GothamBold", "SourceSans", "Ubuntu" },
-								})
-
-								local tbl10 = {}
-
-								for k in pairs(arg.BuiltInThemes) do
-									table.insert(tbl10, k)
-								end
-
-								table.sort(tbl10, function(arg3, arg4)
-									return arg.BuiltInThemes[arg3][1] < arg.BuiltInThemes[arg4][1]
-								end)
-
-								arg2:AddDivider()
-
-								arg2:AddDropdown("ThemeManager_ThemeList", {
-									Text = "Theme list",
-									Values = tbl10,
-									Default = 1,
-								})
-
-								arg2:AddButton("Set as default", function()
-									arg:SaveDefault(arg.Library.Options.ThemeManager_ThemeList.Value)
-									arg.Library:Notify(string.format("Set default theme to %q", arg.Library.Options.ThemeManager_ThemeList.Value))
-								end)
-
-								arg.Library.Options.ThemeManager_ThemeList:OnChanged(function()
-									arg:ApplyTheme(arg.Library.Options.ThemeManager_ThemeList.Value)
-								end)
-
-								arg:LoadDefault()
-								arg.AppliedToTab = true
-
-								UpdateTheme = function()
-									arg:ThemeUpdate()
-								end
-
-								arg.Library.Options.BackgroundColor:OnChanged(UpdateTheme)
-								arg.Library.Options.MainColor:OnChanged(UpdateTheme)
-								arg.Library.Options.AccentColor:OnChanged(UpdateTheme)
-								arg.Library.Options.OutlineColor:OnChanged(UpdateTheme)
-								arg.Library.Options.FontColor:OnChanged(UpdateTheme)
-							end,
-							ApplyToGroupbox = function(arg, arg2)
-								assert(arg.Library, "Must set ThemeManager.Library first!")
-								arg:CreateThemeManager(arg2)
-							end,
-							ApplyToTab = function(arg, arg2)
-								assert(arg.Library, "Must set ThemeManager.Library first!")
-								arg:CreateThemeManager(arg2:AddLeftGroupbox("<b>Themes</b>", "paintbrush"))
-							end,
-						}
-
-						obsidianThemeManager:BuildFolderTree()
-						getgenv().ObsidianThemeManager = obsidianThemeManager
-						local options = lib.Options
-						local toggles = lib.Toggles
-						lib.Scheme.BackgroundColor = Color3.fromHex(defaultColors.BackgroundColor)
-						lib.Scheme.MainColor = Color3.fromHex(defaultColors.MainColor)
-						lib.Scheme.AccentColor = Color3.fromHex(defaultColors.AccentColor)
-						lib.Scheme.OutlineColor = Color3.fromHex(defaultColors.OutlineColor)
-						lib.Scheme.FontColor = Color3.fromHex(defaultColors.FontColor)
-						local RunService2 = game:GetService("RunService")
-						local UserInputService = game:GetService("UserInputService")
-						local Players = game:GetService("Players")
-						local localPlayer2 = Players.LocalPlayer
-
-						_FormatPlayerDropdownDisplay = function(arg)
-							if typeof(arg) == "Instance" and arg:IsA("Player") then
-								return arg.DisplayName .. " (@" .. arg.Name .. ")"
-							end
-
-							if type(arg) == "string" then
-								local v33 = Players:FindFirstChild(arg)
-								if v33 then
-									return v33.DisplayName .. " (@" .. v33.Name .. ")"
-								end
-							end
-
-							return tostring(arg)
-						end
-
-						_currentFPS = 60
-						local tbl10 = { {}, {}, {} }
-						local tbl11 = {}
-						local n16 = 0
-
-						_queueRemote = function(priority, arg, ...)
-							if not arg then
-								return
-							end
-							local args = { ... }
-							local v33 = tbl11[arg]
-
-							if v33 then
-								v33.args = args
-
-								if priority < v33.priority then
-									local v34 = tbl10[v33.priority]
-
-									for i = #v34, 1, -1 do
-										if v34[i] == v33 then
-											table.remove(v34, i)
-											break
-										end
-									end
-
-									v33.priority = priority
-									table.insert(tbl10[priority], v33)
-								end
-
-								return
-							end
-
-							local tbl12 = { priority = priority, remote = arg, args = args }
-							tbl11[arg] = tbl12
-							table.insert(tbl10[priority], tbl12)
-						end
-
-						RunService2.Heartbeat:Connect(function()
-							local v33 = tbl10[1]
-							local v34 = tbl10[2]
-							local v35 = tbl10[3]
-							if #v33 == 0 and #v34 == 0 and #v35 == 0 then
-								return
-							end
-
-							if #v33 > 0 then
-								local v36 = table.remove(v33, 1)
-								tbl11[v36.remote] = nil
-								pcall(v36.remote.FireServer, v36.remote, table.unpack(v36.args))
-							end
-
-							if #v34 > 0 then
-								local v36 = table.remove(v34, 1)
-								tbl11[v36.remote] = nil
-								pcall(v36.remote.FireServer, v36.remote, table.unpack(v36.args))
-							end
-
-							n16 += 1
-
-							if n16 >= 2 then
-								n16 = 0
-
-								if #v35 > 0 then
-									local v36 = table.remove(v35, 1)
-									tbl11[v36.remote] = nil
-									pcall(v36.remote.FireServer, v36.remote, table.unpack(v36.args))
-								end
-							end
-						end)
-
-						_astra_isSpectating = false
-						_scriptStartTime = math.huge
-
-						_notifSounds = {
-							"rbxassetid://134119055334162",
-							"rbxassetid://135103601014582",
-							"rbxassetid://126172750038425",
-						}
-
-						_notifLastSound = nil
-						_notifSoundObj = Instance.new("Sound")
-						_notifSoundObj.Parent = workspace
-						_notifSoundObj.Volume = 1
-						_softNotifEnabled = false
-						_notifDisabled = false
-						_G._useCustomSoundID = false
-						_G._validatedCustomSoundID = nil
-
-						local tbl12 = {
-							IPhone = "rbxassetid://139746569667955",
-							Ding = "rbxassetid://97643101798871",
-							["Steam Notification"] = "rbxassetid://139308638407157",
-							["Steam Achievement"] = "rbxassetid://78959439349986",
-							Mobile = "rbxassetid://131935970184832",
-							Blump = "rbxassetid://129485210015224",
-							Alert = "rbxassetid://134026118100102",
-							Soundful = "rbxassetid://105733192844099",
-							Drum = "rbxassetid://96628258513206",
-						}
-
-						local tbl13 = {}
-
-						local function fn21(soundId, arg)
-							if not soundId or soundId == "" then
-								return
-							end
-
-							pcall(function()
-								local volume = options and options.NotifVolume and options.NotifVolume.Value and options.NotifVolume.Value * 0.4
-
-								if not volume then
-									volume = _notifSoundObj and _notifSoundObj.Volume or 2
-								end
-
-								if not arg then
-									local tbl14 = {}
-
-									for _, v33 in ipairs(tbl13) do
-										if v33 and v33.Parent and v33.IsPlaying then
-											v33.Volume = math.max(0.04, v33.Volume * 0.35)
-											table.insert(tbl14, v33)
-										end
-									end
-
-									tbl13 = tbl14
-								end
-
-								local sound2 = Instance.new("Sound")
-								sound2.SoundId = soundId
-								sound2.Volume = volume
-								sound2.RollOffMaxDistance = 0
-								sound2.Parent = workspace
-								sound2:Play()
-
-								if not arg then
-									table.insert(tbl13, sound2)
-								end
-
-								game:GetService("Debris"):AddItem(sound2, 5)
-							end)
-						end
-
-						_doPlayNotifAudio = function()
-							if _G._suppressNextNotifSound then
-								_G._suppressNextNotifSound = false
-								return
-							end
-
-							if _notifDisabled then
-								return
-							end
-
-							if _G._useCustomSoundID and _G._validatedCustomSoundID then
-								fn21(_G._validatedCustomSoundID)
-								return
-							end
-							local str2 = options and options.NotifPreset and options.NotifPreset.Value or "IPhone"
-							local v33 = tbl12[str2]
-							if v33 then
-								fn21(v33, str2 == "Ding")
-								return
-							end
-
-							if _softNotifEnabled then
-								fn21("rbxassetid://131661992591924")
-								return
-							end
-							local tbl14 = {}
-
-							for _, v34 in pairs(_notifSounds) do
-								if v34 ~= _notifLastSound then
-									table.insert(tbl14, v34)
-								end
-							end
-
-							local v34 = tbl14[math.random(1, #tbl14)]
-							_notifLastSound = v34
-							fn21(v34)
-						end
-
-						_playNotifSound = function()
-						end
-
-						_G._notifTypeList = {
-							"All Notifications",
-							"GUCCI ON",
-							"Anti Lag",
-							"Kick Frame Detected",
-							"Break PCLD",
-							"Packet Lag",
-							"Line Lag",
-							"Pose Target Left / Rejoin",
-							"Pose Presets",
-							"Target Left / Rejoin",
-							"Blobman Target Left / Rejoin",
-							"House Barrier Broken",
-							"Player Kicked",
-							"Whitelisted Player Joined",
-							"Whitelisted Player Left",
-							"Custom Notification",
-							"Theme / Config",
-						}
-
-						local tbl14 = {
-							["All Notifications"] = 5,
-							["GUCCI ON"] = 1.7,
-							["Anti Lag"] = 4,
-							["Kick Frame Detected"] = 4,
-							["Break PCLD"] = 3.5,
-							["Packet Lag"] = 5,
-							["Line Lag"] = 5,
-							["Pose Target Left / Rejoin"] = 6,
-							["Pose Presets"] = 3,
-							["Target Left / Rejoin"] = 6,
-							["Blobman Target Left / Rejoin"] = 6,
-							["House Barrier Broken"] = 5.4,
-							["Player Kicked"] = 5.4,
-							["Whitelisted Player Joined"] = 3,
-							["Whitelisted Player Left"] = 3,
-							["Custom Notification"] = 2.5,
-							["Theme / Config"] = 3,
-						}
-
-						_G._notifTargetSettings = {}
-
-						for _, v33 in ipairs(_G._notifTypeList) do
-							_G._notifTargetSettings[v33] = { Disabled = false, Bold = false, Duration = tbl14[v33] or 5 }
-						end
-
-						_G._matchNotifType = function(arg, arg2)
-							local str2 = (arg or ""):lower()
-							local str3 = (arg2 or ""):lower()
-							if str3:find("gucci on") then
-								return "GUCCI ON"
-							end
-
-							if str3:find("anti lag") then
-								return "Anti Lag"
-							end
-
-							if str3:find("kick frame") then
-								return "Kick Frame Detected"
-							end
-
-							if str3:find("pcld") then
-								return "Break PCLD"
-							end
-
-							if str2:find("packet lag") or str3:find("packet lag") then
-								return "Packet Lag"
-							end
-
-							if str2:find("line lag") or str3:find("line lag") then
-								return "Line Lag"
-							end
-
-							if str3:find("pose target") then
-								return "Pose Target Left / Rejoin"
-							end
-
-							if str3:find("preset") then
-								return "Pose Presets"
-							end
-
-							if str3:find("whitelisted player") and (str3:find("joined") or str3:find("join")) then
-								return "Whitelisted Player Joined"
-							end
-
-							if str3:find("whitelisted player") and (str3:find("left") or str3:find("leave")) then
-								return "Whitelisted Player Left"
-							end
-
-							if str3:find("blobman target") and (str3:find("left") or str3:find("rejoin") or str3:find("autoselected")) then
-								return "Blobman Target Left / Rejoin"
-							end
-
-							if str3:find("target") and (str3:find("left") or str3:find("rejoin")) then
-								return "Target Left / Rejoin"
-							end
-
-							if str3:find("house barrier") then
-								return "House Barrier Broken"
-							end
-
-							if str3:find("has been kicked") or str3:find("kicked") then
-								return "Player Kicked"
-							end
-							local pos = str3:find("notification test")
-
-							if not pos then
-								pos = options and options.CustomNotifTitle
-
-								if pos then
-									pos = str2:find(tostring(options.CustomNotifTitle.Value):lower())
-								end
-							end
-
-							if pos then
-								return "Custom Notification"
-							end
-
-							if str3:find("theme") or str3:find("config") or str3:find("loaded:") then
-								return "Theme / Config"
-							end
-							return "All Notifications"
-						end
-
-						local notify = nil
-
-						task.defer(function()
-							notify = lib.Notify
-
-							lib.Notify = function(arg, arg2, ...)
-								local v33 = table.pack(...)
-								if _notifDisabled then
-									return
-								end
-								local v34
-
-								if typeof(arg2) == "table" then
-									v34 = _G._matchNotifType(arg2.Title, arg2.Description)
-								else
-									v34 = _G._matchNotifType("", tostring(arg2 or ""))
-								end
-
-								local allNotifications = _G._notifTargetSettings[v34] or _G._notifTargetSettings["All Notifications"] or { Disabled = false, Bold = true, Duration = 5 }
-								if v34 ~= "All Notifications" and allNotifications.Disabled then
-									return
-								end
-								_doPlayNotifAudio()
-								local bold = allNotifications.Bold
-								local duration = allNotifications.Duration
-
-								local function fn22(arg3)
-									if not arg3 then
-										return arg3
-									end
-									return (tostring(arg3):gsub("<[uU]>", ""):gsub("</[uU]>", ""))
-								end
-
-								local v35
-
-								if typeof(arg2) == "table" then
-									local v36 = table.clone(arg2)
-
-									if duration and v34 ~= "All Notifications" then
-										v36.Time = duration
-									end
-
-									if v36.Title then
-										local str2 = tostring(v36.Title)
-
-										if not bold then
-											str2 = str2:gsub("<[bB]>", ""):gsub("</[bB]>", "")
-										end
-
-										v36.Title = fn22(str2)
-									end
-
-									if v36.Description then
-										local str2 = tostring(v36.Description)
-
-										if not bold then
-											str2 = str2:gsub("<[bB]>", ""):gsub("</[bB]>", "")
-										end
-
-										v36.Description = fn22(str2)
-									end
-
-									v35 = notify(arg, v36)
-								else
-									local str2 = tostring(arg2 or "")
-
-									if not bold then
-										str2 = str2:gsub("<[bB]>", ""):gsub("</[bB]>", "")
-									end
-
-									local v36 = fn22(str2)
-									local value = select(1, ...)
-
-									if not (duration and v34 ~= "All Notifications") then
-										duration = value
-									end
-
-									v35 = notify(arg, v36, duration, select(2, table.unpack(v33, 1, v33.n)))
-								end
-
-								return v35
-							end
-						end)
-
-						_fixNotifWrap = function(arg)
-							task.defer(function()
-								local CoreGui = game:GetService("CoreGui")
-								local TextService = game:GetService("TextService")
-
-								for _, descendant in pairs(CoreGui:GetDescendants()) do
-									if descendant:IsA("TextLabel") and descendant.Text == arg then
-										local parent = descendant
-
-										for i = 1, 6 do
-											if not (not parent.Parent or parent.Parent:IsA("ScreenGui") or parent.Parent:IsA("Folder")) then
-												parent = parent.Parent
-												continue
-											end
-											break
-										end
-
-										local n17 = 0
-
-										for _, descendant2 in ipairs(parent:GetDescendants()) do
-											if descendant2:IsA("TextLabel") then
-												descendant2.TextWrapped = false
-												descendant2.TextScaled = false
-												local text = descendant2.Text
-												local v33
-
-												if descendant2.RichText then
-													v33 = string.gsub(text, "<[^>]+>", "")
-												else
-													v33 = text
-												end
-
-												local textSize = TextService:GetTextSize(v33, descendant2.TextSize or 14, string.find(text, "<b>") and Enum.Font.GothamBold or descendant2.Font, Vector2.new(math.huge, math.huge))
-												local n18 = textSize.X + 45
-
-												if n17 < n18 then
-													n17 = n18
-												end
-
-												descendant2.Size = UDim2.new(0, textSize.X + 16, descendant2.Size.Y.Scale, descendant2.Size.Y.Offset)
-											end
-										end
-
-										for i = 1, 7 do
-											if not (not descendant or descendant:IsA("ScreenGui") or descendant:IsA("Folder")) then
-												if descendant:IsA("Frame") then
-													if descendant.AbsoluteSize.X < n17 then
-														descendant.Size = UDim2.new(0, n17, descendant.Size.Y.Scale, descendant.Size.Y.Offset)
-													end
-												end
-
-												descendant = descendant.Parent
-												continue
-											end
-
-											break
-										end
-
-										return
-									end
-								end
-							end)
-						end
-
-						local character = localPlayer2.Character or localPlayer2.CharacterAdded:Wait()
-
-						if character then
-							local humanoid = character:FindFirstChild("Humanoid")
-							local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-
-							task.spawn(function()
-								humanoid = character:WaitForChild("Humanoid", 10)
-								humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10)
-							end)
-
-							localPlayer2.CharacterAdded:Connect(function(character2)
-								character = character2
-
-								task.spawn(function()
-									humanoid = character2:WaitForChild("Humanoid", 10)
-									humanoidRootPart = character2:WaitForChild("HumanoidRootPart", 10)
-								end)
-							end)
-
-							lib.CornerRadius = 15
-							lib.Scheme.Font = Font.fromEnum(Enum.Font.Gotham)
-
-							local v33 = lib:CreateWindow({
-								Title = "<b>ASTRA</b>",
-								Icon = 104599341811828,
-								Footer = "<b>ASTRA • Make them fear you</b>",
-								Font = Enum.Font.Gotham,
-								NotifySide = "Right",
-								ShowCustomCursor = true,
-								Center = true,
-								AutoShow = true,
-								Resizable = true,
-								Size = UDim2.fromOffset(680, 630),
-								CornerRadius = 15,
-								EnableSidebarResize = true,
-								EnableCompacting = true,
-								SidebarCompacted = true,
-								SidebarCompactWidth = 48,
-								MinSidebarWidth = 100,
-								CompactWidthActivation = 100,
-								BackgroundImage = "rbxassetid://0",
-								Animations = {
-									ToggleWindow = false,
-									TabSwitch = true,
-									Groupbox = true,
-									Dropdown = true,
-									KeyPicker = true,
-								},
-								TabTransitionTime = 0.35,
-								TabSwipeOffset = 24,
-								TabSwipeFrom = "auto",
-							})
-
-							pcall(function()
-								v33:SetAnimations({ ToggleWindow = false, TabSwitch = true, Groupbox = true, Dropdown = true, KeyPicker = true }, 0.35, 24, "auto")
-							end)
-
-							if lib.ScreenGui then
-								local function fn22(arg)
-									if arg:IsA("TextLabel") or arg:IsA("TextButton") then
-										arg.RichText = true
-									end
-								end
-
-								for _, descendant in ipairs(lib.ScreenGui:GetDescendants()) do
-									fn22(descendant)
-								end
-
-								lib.ScreenGui.DescendantAdded:Connect(function(descendant)
-									fn22(descendant)
-
-									if descendant:IsA("UICorner") and descendant.CornerRadius.Scale == 0 then
-										descendant.CornerRadius = UDim.new(0, lib.CornerRadius or 15)
-
-										task.defer(function()
-											if descendant.Parent and descendant.CornerRadius.Scale == 0 then
-												descendant.CornerRadius = UDim.new(0, lib.CornerRadius or 15)
-											end
-										end)
-									end
-								end)
-
-								_applyCornerRadius(15)
-							end
-
-							local tbl15 = {
-								Home = v33:AddTab("<b>Home</b>", "house", "System stats and main utilities"),
-								Player = v33:AddTab("<b>Player</b>", "user", "Character mods and movement controls"),
-								Defence = v33:AddTab("<b>Defence</b>", "shield", "Protection modules and counter measures"),
-								Combat = v33:AddTab("<b>Miscellaneous</b>", "shuffle", "Additional misc features and extra utilities"),
-								Target = v33:AddTab("<b>Target</b>", "crosshair", "Target selection and method options"),
-								Blobman = v33:AddTab("<b>Blobman</b>", 100381793919290, "Blobman Functions and method options"),
-								Pose = v33:AddTab("<b>Pose</b>", "person-standing", "Custom character poses and offsets"),
-								AimActivity = v33:AddTab("<b>Aim</b>", "mouse", "Aim assistance and targeting utilities"),
-								Keybinds = v33:AddTab("<b>Keybinds</b>", "keyboard", "Keybind configurations and hotkeys"),
-								NewESP = v33:AddTab("<b>ESP</b>", "eye", "Visual overlays, ESP, and audio settings"),
-								ShaderMap = v33:AddTab("<b>Visual</b>", "wallpaper", "Environmental graphics and ambient sounds"),
-								AimTrainer = v33:AddTab("<b>AimTrainer</b>", "circle-plus", "Aim practice environment"),
-								Whitelist = v33:AddTab("<b>Whitelist</b>", "scroll-text", "Whitelist, protections, and gamepasses"),
-								Settings = v33:AddTab("<b>Settings</b>", "cog", "Notifications, themes, and UI preferences"),
-								Server = v33:AddTab("<b>Server</b>", "server", "Server management, crash functions, and info"),
-							}
-
-							-- SERVER TAB: Server Shutdown feature
-							local serverGroupbox = tbl15.Server:AddLeftGroupbox("<b>Server Control</b>", "server", nil, nil, nil, "Shutdown & Crashing")
-							pcall(function() serverGroupbox:SetDescription("Shutdown & Crashing") end)
-
-							local function triggerServerShutdown()
-								local screenGui = Instance.new("ScreenGui")
-								screenGui.Name = "ShutdownTimerGui"
-								screenGui.ResetOnSpawn = false
-								screenGui.Parent = game:GetService("CoreGui")
-
-								local frame = Instance.new("Frame")
-								frame.Size = UDim2.new(0, 320, 0, 100)
-								frame.Position = UDim2.new(0.5, -160, 0.2, 0)
-								frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-								frame.BorderSizePixel = 0
-								frame.Parent = screenGui
-
-								local uiCorner = Instance.new("UICorner")
-								uiCorner.CornerRadius = UDim.new(0, 8)
-								uiCorner.Parent = frame
-
-								local textLabel = Instance.new("TextLabel")
-								textLabel.Size = UDim2.new(1, 0, 1, 0)
-								textLabel.BackgroundTransparency = 1
-								textLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
-								textLabel.TextSize = 20
-								textLabel.Font = Enum.Font.GothamBold
-								textLabel.Text = "🚨 SHUTDOWN CRASHING... (15s) 🚨"
-								textLabel.Parent = frame
-
-								task.spawn(function()
-									local RS = game:GetService("ReplicatedStorage")
-									pcall(function()
-										local Event1 = RS:WaitForChild("DataEvents"):WaitForChild("UpdateTexturesChoice")
-										Event1:FireServer(("Oats"):rep(1e6))
-
-										task.wait()
-
-										local Event = RS:WaitForChild("DataEvents"):WaitForChild("DataRemoteEvent")
-										Event:FireServer(("a"):rep(1))
-
-										for j = 1, 1e6 do
-											Event:FireServer()
-										end
-									end)
-								end)
-
-								task.spawn(function()
-									for i = 15, 1, -1 do
-										textLabel.Text = "🚨 CRASHING SERVER... (" .. tostring(i) .. "s) 🚨"
-										task.wait(1)
-									end
-									textLabel.Text = "💥 CRASH SEQUENCE COMPLETE 💥"
-									textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-									task.wait(2)
-									screenGui:Destroy()
-								end)
-							end
-
-							serverGroupbox:AddButton({
-								Text = "Shutdown Server",
-								Func = function()
-									triggerServerShutdown()
-									lib:Notify({
-										Title = "<b>ASTRA</b>",
-										Description = "Server shutdown sequence triggered!",
-										BigIcon = "rbxassetid://104599341811828",
-										Time = 4,
-									})
-								end,
-							})
-
-							_G._FTAP_WhitelistEnabled = true
-							_G._FTAP_Whitelist = {}
-
-							_isWhitelisted = function(arg)
-								if not _G._FTAP_WhitelistEnabled then
-									return false
-								end
-
-								if not arg then
-									return false
-								end
-								return _G._FTAP_Whitelist[arg.Name] == true
-							end
-
-							pcall(function()
-								lib.Toggled = true
-
-								if lib.ScreenGui then
-									local main = lib.ScreenGui:FindFirstChild("Main")
-
-									if main then
-										main.Visible = true
-									end
-								end
-							end)
-
-							_home_kickCount = 0
-
-							_getGreeting = function()
-								local num = tonumber(os.date("%H"))
-								if num >= 5 and num < 12 then
-									return "Good Morning"
-								end
-
-								if num >= 12 and num < 17 then
-									return "Good Afternoon"
-								end
-
-								if num >= 17 and num < 21 then
-									return "Good Evening"
-								end
-								return "Good Night"
-							end
-
-							local v34 = tbl15.Home:AddLeftGroupbox("<b>A S T R A</b>", "user-round-key", nil, nil, nil, "Greetings")
-
-							pcall(function()
-								v34:SetDescription("Greetings")
-							end)
-
-							local v35 = getmetatable(v34)
-
-							if v35 then
-								if v35.__index then
-									local addDropdown = v35.__index.AddDropdown
-
-									if addDropdown and not v35.__index._origAddDropdown then
-										v35.__index._origAddDropdown = addDropdown
-
-										v35.__index.AddDropdown = function(arg, arg2, arg3)
-											if type(arg3) == "table" and arg3.AllowNull == nil then
-												arg3.AllowNull = true
-											end
-
-											return addDropdown(arg, arg2, arg3)
-										end
-									end
-								end
-
-								local Players2 = game:GetService("Players")
-								local imageLabel = Instance.new("ImageLabel")
-								imageLabel.BackgroundTransparency = 1
-								imageLabel.Size = UDim2.new(1.4, 0, 1.4, 0)
-								imageLabel.Position = UDim2.new(-0.2, 0, -0.2, 0)
-								imageLabel.ScaleType = Enum.ScaleType.Fit
-								imageLabel.ClipsDescendants = false
-								imageLabel.Image = ""
-								local AvatarPassthrough = v34:AddUIPassthrough("AvatarPassthrough", { Instance = imageLabel, Height = 225 })
-
-								task.spawn(function()
-									task.wait(0.1)
-									local parent = imageLabel.Parent
-
-									if parent then
-										_updateAvatarHeight = function()
-											local x = parent.AbsoluteSize.X
-
-											if x > 0 then
-												local n17 = math.clamp(x, 180, 270)
-
-												pcall(function()
-													AvatarPassthrough:SetHeight(n17)
-												end)
-											end
-										end
-
-										_updateAvatarHeight()
-										parent:GetPropertyChangedSignal("AbsoluteSize"):Connect(_updateAvatarHeight)
-									end
-								end)
-
-								task.spawn(function()
-									local ok, image = pcall(function()
-										return Players2:GetUserThumbnailAsync(localPlayer2.UserId, Enum.ThumbnailType.AvatarThumbnail, Enum.ThumbnailSize.Size420x420)
-									end)
-
-									if type(image) ~= "string" then
-										image = "rbxthumb://type=AvatarThumbnail&id=" .. tostring(localPlayer2.UserId) .. "&w=420&h=420"
-									end
-
-									if ok and image then
-										pcall(function()
-											imageLabel.Image = image
-										end)
-									end
-								end)
-
-								local str2 = ", <b>" .. localPlayer2.Name .. "</b>"
-								v34:AddLabel(_getGreeting() .. str2)
-								v34:AddLabel("Enjoy having <b>ASTRA</b>")
-								v34:AddLabel("All Credits To: <b>Astra Hub</b>")
-								v34:AddLabel("This Script is Still <b>In Development</b>")
-								local v36 = tbl15.Home:AddRightGroupbox("<b>Statistics</b>", "blinds", nil, nil, nil, "Info")
-
-								pcall(function()
-									v36:SetDescription("Info")
-								end)
-
-								local v37 = v36:AddLabel("Current time: <b>--:--</b>")
-								v36:AddLabel("Current script version: <b>v4.649</b>")
-								local v38 = v36:AddLabel("FPS: <b>--</b>")
-								local v39 = v36:AddLabel("Ping: <b>-- ms</b>")
-								getgenv()._HomeLblFPS = v38
-								getgenv()._HomeLblPing = v39
-								v36:AddDivider()
-								local v40 = v36:AddLabel("Players in server: <b>--</b>")
-								local v41 = v36:AddLabel("Elapsed time: <b>0 seconds</b>")
-								local v42 = v36:AddLabel("Kicked players: <b>0</b>")
-
-								task.spawn(function()
-									while task.wait(1) do
-										if not lib.Unloaded then
-											local flag10 = lib.Toggled == false
-
-											if not flag10 then
-												flag10 = not (lib.ScreenGui and lib.ScreenGui.Enabled)
-											end
-
-											if not (flag10 or lib.ActiveTab and lib.ActiveTab ~= tbl15.Home) then
-												local num = tonumber(os.date("%H"))
-												local num2 = tonumber(os.date("%M"))
-
-												pcall(function()
-													v37:SetText(string.format("Current time: <b>%02d:%02d</b>", num, num2))
-												end)
-
-												local n17 = #game:GetService("Players"):GetPlayers()
-
-												pcall(function()
-													v40:SetText("Players in server: <b>" .. n17 .. " / 25</b>")
-												end)
-
-												local v43 = _scriptStartTime
-												local n18 = math.floor(tick() - v43)
-
-												pcall(function()
-													v41:SetText("Elapsed time: <b>" .. n18 .. " seconds</b>")
-												end)
-
-												pcall(function()
-													v42:SetText("Kicked players: <b>" .. _home_kickCount .. "</b>")
-												end)
-											end
-
-											continue
-										end
-
-										break
-									end
-								end)
-
-								local v43 = tbl15.Home:AddRightGroupbox("<b>Script</b>", "code-xml", nil, nil, nil, "Script Functions")
-
-								pcall(function()
-									v43:SetDescription("Script Functions")
-								end)
-
-								local TweenService2 = game:GetService("TweenService")
-								local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-								local tweenInfo2 = TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-
-								_swapText = function(arg, text, textColor3, fontFace, arg2, arg3, arg4, arg5)
-									TweenService2:Create(arg, tweenInfo, { TextTransparency = 1 }):Play()
-									task.wait(0.16)
-									arg.Text = text
-									arg.TextColor3 = textColor3
-									arg.FontFace = fontFace
-									TweenService2:Create(arg, tweenInfo2, { TextTransparency = 0 }):Play()
-
-									if arg5 then
-										arg5()
-									end
-								end
-
-								_restoreText = function(arg, text, textColor3, fontFace)
-									TweenService2:Create(arg, tweenInfo, { TextTransparency = 1 }):Play()
-									task.wait(0.16)
-									arg.Text = text
-									arg.TextColor3 = textColor3
-									arg.FontFace = fontFace
-									TweenService2:Create(arg, tweenInfo2, { TextTransparency = 0 }):Play()
-								end
-
-								_addConfirmBtn = function(arg, arg2, arg3, arg4, textColor3)
-									local v44 = arg:AddButton({
-										Text = arg2,
-										DoubleClick = false,
-										Func = function()
-										end,
-									})
-
-									local flag10 = false
-									local n17 = 0
-									local flag11 = false
-									local textColor32 = textColor3 or nil
-									local fontFace = nil
-
-									if textColor3 then
-										task.defer(function()
-											pcall(function()
-												v44.Base.TextColor3 = textColor3
-												flag11 = true
-
-												v44.Base:GetPropertyChangedSignal("TextColor3"):Connect(function()
-													if flag11 and v44.Base.TextColor3 ~= textColor3 then
-														v44.Base.TextColor3 = textColor3
-													end
-												end)
-											end)
-										end)
-									end
-
-									v44.Base.MouseButton1Click:Connect(function()
-										local base = v44.Base
-
-										if not textColor32 then
-											textColor32 = base.TextColor3
-										end
-
-										if not fontFace then
-											fontFace = base.FontFace
-										end
-
-										local font = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
-
-										if not flag10 then
-											if arg4 then
-												local v45, v46 = arg4()
-
-												if not v45 then
-													n17 += 1
-													local v47 = n17
-													flag11 = false
-
-													task.spawn(function()
-														_swapText(base, v46 or "Error", Color3.fromRGB(255, 40, 40), font, arg2, textColor32, fontFace)
-													end)
-
-													task.delay(1.3, function()
-														if n17 == v47 then
-															task.spawn(function()
-																_restoreText(base, arg2, textColor32, fontFace)
-																flag11 = textColor3 ~= nil
-															end)
-														end
-													end)
-
-													return
-												end
-											end
-
-											flag10 = true
-											n17 += 1
-											local v45 = n17
-											flag11 = false
-
-											task.spawn(function()
-												_swapText(base, "Are You Sure?", Color3.fromRGB(255, 40, 40), font, arg2, textColor32, fontFace)
-											end)
-
-											task.delay(1.3, function()
-												if n17 == v45 and flag10 then
-													flag10 = false
-
-													task.spawn(function()
-														_restoreText(base, arg2, textColor32, fontFace)
-														flag11 = textColor3 ~= nil
-													end)
-												end
-											end)
-										else
-											flag10 = false
-											n17 += 1
-											flag11 = false
-
-											task.spawn(function()
-												_restoreText(base, arg2, textColor32, fontFace)
-												flag11 = textColor3 ~= nil
-												task.wait(0.1)
-												arg3()
-											end)
-										end
-									end)
-
-									return v44
-								end
-
-								_addConfirmBtn(v43, "Unload Script", function()
-									lib:Unload()
-								end)
-
-								_addConfirmBtn(_addConfirmBtn(v43, "Rejoin Server", function()
-									local localPlayer3 = game:GetService("Players").LocalPlayer
-									local TeleportService = game:GetService("TeleportService")
-									local flag10 = game.VIPServerId ~= "" and game.VIPServerId ~= nil
-
-									pcall(function()
-										if flag10 then
-											TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, localPlayer3)
-										else
-											TeleportService:Teleport(game.PlaceId, localPlayer3)
-										end
-									end)
-								end), "Server Hop", function()
-									task.spawn(function()
-										local HttpService = game:GetService("HttpService")
-										local TeleportService = game:GetService("TeleportService")
-										local Players3 = game:GetService("Players")
-										local placeId = game.PlaceId
-										local jobId = game.JobId
-										local v44 = nil
-
-										pcall(function()
-											v44 = lib:Notify({
-												Title = "<b>ASTRA</b>",
-												Description = "Searching servers...",
-												BigIcon = "rbxassetid://104599341811828",
-												Steps = 3,
-												Persist = true,
-											})
-
-											if v44 and v44.ChangeStep then
-												v44:ChangeStep(1)
-											end
-										end)
-
-										local request_ = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
-
-										local function fn22(arg)
-											local str3 = string.format("https://games.roblox.com/v1/games/%s/servers/Public?sortOrder=Asc&limit=100", tostring(placeId))
-
-											if arg and arg ~= "" then
-												str3 ..= "&cursor=" .. tostring(arg)
-											end
-
-											local body = nil
-
-											if request_ then
-												local ok, result = pcall(request_, { Url = str3, Method = "GET", Headers = { ["Content-Type"] = "application/json" } })
-
-												if ok and result and (result.StatusCode == 200 or result.StatusMessage == "OK") then
-													body = result.Body
-												end
-											end
-
-											if not body then
-												pcall(function()
-													body = game:HttpGet(str3)
-												end)
-											end
-
-											if body then
-												local ok, result = pcall(function()
-													return HttpService:JSONDecode(body)
-												end)
-
-												if ok and result and type(result.data) == "table" then
-													return result
-												end
-											end
-
-											return nil
-										end
-
-										local tbl16 = {}
-										local tbl17 = {}
-										local tbl18 = {}
-										local str3 = ""
-
-										for i = 1, 5 do
-											local v45 = fn22(str3)
-
-											if v45 then
-												for _, v46 in ipairs(v45.data) do
-													if type(v46) == "table" and v46.id and v46.id ~= jobId and type(v46.playing) == "number" and type(v46.maxPlayers) == "number" then
-														if v46.playing < v46.maxPlayers then
-															if v46.playing >= 12 then
-																table.insert(tbl16, v46.id)
-															elseif v46.playing >= 5 then
-																table.insert(tbl17, v46.id)
-															elseif v46.playing >= 1 then
-																table.insert(tbl18, v46.id)
-															end
-														end
-													end
-												end
-
-												if not (#tbl16 >= 10 or #tbl17 >= 15 or not v45.nextPageCursor or v45.nextPageCursor == "") then
-													str3 = v45.nextPageCursor
-													continue
-												end
-											end
-
-											break
-										end
-
-										local v45 = nil
-
-										if #tbl16 > 0 then
-											v45 = tbl16[math.random(1, #tbl16)]
-										elseif #tbl17 > 0 then
-											v45 = tbl17[math.random(1, #tbl17)]
-										elseif #tbl18 > 0 then
-											v45 = tbl18[math.random(1, #tbl18)]
-										end
-
-										pcall(function()
-											if v44 then
-												if v44.ChangeStep then
-													v44:ChangeStep(2)
-												end
-
-												if v44.ChangeDescription then
-													v44:ChangeDescription("Server found! Joining...")
-												end
-											end
-										end)
-
-										task.wait(0.6)
-
-										pcall(function()
-											if v44 then
-												if v44.ChangeStep then
-													v44:ChangeStep(3)
-												end
-
-												if v44.ChangeDescription then
-													v44:ChangeDescription("Teleporting...")
-												end
-											end
-										end)
-
-										task.wait(0.3)
-
-										if v45 then
-											if not pcall(function()
-												TeleportService:TeleportToPlaceInstance(placeId, v45, Players3.LocalPlayer)
-											end) then
-												pcall(function()
-													TeleportService:Teleport(placeId, Players3.LocalPlayer)
-												end)
-											end
-										else
-											pcall(function()
-												TeleportService:Teleport(placeId, Players3.LocalPlayer)
-											end)
-										end
-									end)
-								end)
-
-								local v44 = v43:AddButton({
-									Text = "Copy Discord Link",
-									DoubleClick = false,
-									Func = function()
-									end,
-								})
-
-								local flag11 = false
-								local font = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
-
-								v44.Base.MouseButton1Click:Connect(function()
-									if flag11 then
-										return
-									end
-									flag11 = true
-									local base = v44.Base
-									local text = base.Text
-									local textColor3 = base.TextColor3
-									local fontFace = base.FontFace
-
-									pcall(function()
-										setclipboard("https://discord.gg/astra")
-									end)
-
-									task.spawn(function()
-										_swapText(base, "Successfully Copied!", Color3.fromRGB(80, 200, 100), font, text, textColor3, fontFace)
-										task.wait(2.5)
-										_restoreText(base, text, textColor3, fontFace)
-										task.wait(0.25)
-										flag11 = false
-									end)
-								end)
-
-								v43:AddDivider()
-								v43:AddCheckbox("JoinWithAntiLag", { Text = "Join With Anti Lag", Default = true })
-								v43:AddCheckbox("JoinWithScript", { Text = "Join With Script", Default = false })
-							end
-						end
-					end
-				end
-			end
+	end
+	if type(origGetCustomIcon) == "function" then
+		return origGetCustomIcon(self, candidate)
+	end
+	return nil
+end
+
+-- ===== THEME MANAGER =====
+local hasFs = type(isfolder) == "function" and type(makefolder) == "function" and type(isfile) == "function" and type(writefile) == "function" and type(readfile) == "function"
+local themeFields = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
+
+local obsidianThemeManager = {
+	Folder = "AstraLibSettings",
+	Library = lib,
+	AppliedToTab = false,
+	BuiltInThemes = {
+		Default = {
+			1,
+			{
+				FontColor = "c1cdcd",
+				MainColor = "121212",
+				AccentColor = "007aff",
+				BackgroundColor = "0c0c0c",
+				OutlineColor = "252528",
+			},
+		},
+		BBot = {
+			2,
+			{
+				FontColor = "ffffff",
+				MainColor = "1e1e1e",
+				AccentColor = "7e48a3",
+				BackgroundColor = "232323",
+				OutlineColor = "141414",
+			},
+		},
+	},
+}
+
+function obsidianThemeManager:SetLibrary(library)
+	self.Library = library
+end
+
+function obsidianThemeManager:GetPaths()
+	local paths = {}
+	local parts = self.Folder:split("/")
+	for i = 1, #parts do
+		paths[#paths + 1] = table.concat(parts, "/", 1, i)
+	end
+	paths[#paths + 1] = self.Folder .. "/themes"
+	return paths
+end
+
+function obsidianThemeManager:BuildFolderTree()
+	if not hasFs then return end
+	for _, path in ipairs(self:GetPaths()) do
+		if not isfolder(path) then
+			pcall(makefolder, path)
 		end
 	end
 end
 
-print("ASTRA script successfully compiled and loaded with server shutdown and new logo!")
-```[cite: 3]
+function obsidianThemeManager:ApplyTheme(themeName)
+	local themeEntry = self.BuiltInThemes[themeName]
+	if not themeEntry then return end
+	local colors = themeEntry[2]
+	for k, v in pairs(colors) do
+		if k == "FontFace" then
+			pcall(function() self.Library:SetFont(Enum.Font[v]) end)
+			if self.Library.Options[k] then
+				pcall(function() self.Library.Options[k]:SetValue(v) end)
+			end
+		else
+			local col = Color3.fromHex(v)
+			self.Library.Scheme[k] = col
+			if self.Library.Options[k] then
+				pcall(function() self.Library.Options[k]:SetValueRGB(col) end)
+			end
+		end
+	end
+	self:ThemeUpdate()
+end
 
-Would you like to add groupboxes or controls to any of the other tabs (`Player`, `Defence`, `Target`, `Blobman`, etc.), or merge any specific pieces from the earlier `Kozmoz` UI code into this window?
+function obsidianThemeManager:ThemeUpdate()
+	for _, field in ipairs(themeFields) do
+		if self.Library.Options and self.Library.Options[field] then
+			self.Library.Scheme[field] = self.Library.Options[field].Value
+		end
+	end
+	if self.Library.UpdateColorsUsingRegistry then
+		self.Library:UpdateColorsUsingRegistry()
+	end
+end
+
+obsidianThemeManager:BuildFolderTree()
+getgenv().ObsidianThemeManager = obsidianThemeManager
+
+-- ===== CREATE OBSIDIAN WINDOW & TABS =====
+local window = lib:CreateWindow({
+	Title = "<b>ASTRA</b>",
+	Icon = 104599341811828,
+	Footer = "<b>ASTRA • Make them fear you</b>",
+	Font = Enum.Font.Gotham,
+	NotifySide = "Right",
+	ShowCustomCursor = true,
+	Center = true,
+	AutoShow = true,
+	Resizable = true,
+	Size = UDim2.fromOffset(680, 630),
+	CornerRadius = 15,
+	EnableSidebarResize = true,
+	EnableCompacting = true,
+	SidebarCompacted = true,
+	SidebarCompactWidth = 48,
+	MinSidebarWidth = 100,
+	CompactWidthActivation = 100,
+	BackgroundImage = "rbxassetid://0",
+})
+
+if lib.ScreenGui then
+	for _, desc in ipairs(lib.ScreenGui:GetDescendants()) do
+		if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+			desc.RichText = true
+		end
+	end
+	lib.ScreenGui.DescendantAdded:Connect(function(desc)
+		if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+			desc.RichText = true
+		end
+		if desc:IsA("UICorner") and desc.CornerRadius.Scale == 0 then
+			desc.CornerRadius = UDim.new(0, lib.CornerRadius or 15)
+		end
+	end)
+	applyCornerRadius(15)
+end
+
+local tabs = {
+	Home = window:AddTab("<b>Home</b>", "house", "System stats and main utilities"),
+	Player = window:AddTab("<b>Player</b>", "user", "Character mods and movement controls"),
+	Defence = window:AddTab("<b>Defence</b>", "shield", "Protection modules and counter measures"),
+	Combat = window:AddTab("<b>Miscellaneous</b>", "shuffle", "Additional misc features and extra utilities"),
+	Target = window:AddTab("<b>Target</b>", "crosshair", "Target selection and method options"),
+	Blobman = window:AddTab("<b>Blobman</b>", 100381793919290, "Blobman Functions and method options"),
+	Pose = window:AddTab("<b>Pose</b>", "person-standing", "Custom character poses and offsets"),
+	AimActivity = window:AddTab("<b>Aim</b>", "mouse", "Aim assistance and targeting utilities"),
+	Keybinds = window:AddTab("<b>Keybinds</b>", "keyboard", "Keybind configurations and hotkeys"),
+	NewESP = window:AddTab("<b>ESP</b>", "eye", "Visual overlays, ESP, and audio settings"),
+	ShaderMap = window:AddTab("<b>Visual</b>", "wallpaper", "Environmental graphics and ambient sounds"),
+	AimTrainer = window:AddTab("<b>AimTrainer</b>", "circle-plus", "Aim practice environment"),
+	Whitelist = window:AddTab("<b>Whitelist</b>", "scroll-text", "Whitelist, protections, and gamepasses"),
+	Settings = window:AddTab("<b>Settings</b>", "cog", "Notifications, themes, and UI preferences"),
+	Server = window:AddTab("<b>Server</b>", "server", "Server management, crash functions, and info"),
+}
+
+-- ===== DEFENCE TAB (OBSIDIAN UI) =====
+local defenceLeft = tabs.Defence:AddLeftGroupbox("<b>Anti-Grab & Counter</b>", "shield")
+local defenceRight = tabs.Defence:AddRightGroupbox("<b>Desync & Safeguards</b>", "lock")
+
+getgenv()._DEFENCE_STATE = {
+	AntiGrab = false,
+	AutoBreakGrab = false,
+	AntiRagdoll = false,
+	DesyncToggle = false,
+}
+
+defenceLeft:AddToggle("DefenceAntiGrab", {
+	Text = "Anti Grab",
+	Default = false,
+	Callback = function(val)
+		getgenv()._DEFENCE_STATE.AntiGrab = val
+	end,
+})
+
+defenceLeft:AddToggle("DefenceAutoBreakGrab", {
+	Text = "Auto Break Grab",
+	Default = false,
+	Callback = function(val)
+		getgenv()._DEFENCE_STATE.AutoBreakGrab = val
+	end,
+})
+
+defenceLeft:AddToggle("DefenceAntiRagdoll", {
+	Text = "Anti Ragdoll",
+	Default = false,
+	Callback = function(val)
+		getgenv()._DEFENCE_STATE.AntiRagdoll = val
+	end,
+})
+
+defenceRight:AddToggle("DefenceDesync", {
+	Text = "Enable Desync",
+	Default = false,
+	Callback = function(val)
+		getgenv()._DEFENCE_STATE.DesyncToggle = val
+		if val then
+			desync:RequestDesync(function()
+				local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+				return hrp and (hrp.CFrame * CFrame.new(0, -12, 0)) or nil
+			end, 30)
+		else
+			desync:CancelRequest()
+		end
+	end,
+})
+
+defenceRight:AddButton({
+	Text = "Reset Desync",
+	Func = function()
+		desync:CancelRequest()
+		lib:Notify({
+			Title = "<b>ASTRA</b>",
+			Description = "Desync state reset.",
+			BigIcon = "rbxassetid://104599341811828",
+			Time = 2.5,
+		})
+	end,
+})
+
+-- ===== SERVER TAB: SERVER SHUTDOWN =====
+local serverGroupbox = tabs.Server:AddLeftGroupbox("<b>Server Control</b>", "server")
+
+local function triggerServerShutdown()
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "ShutdownTimerGui"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = CoreGui
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 320, 0, 100)
+	frame.Position = UDim2.new(0.5, -160, 0.2, 0)
+	frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	frame.BorderSizePixel = 0
+	frame.Parent = screenGui
+
+	local uiCorner = Instance.new("UICorner")
+	uiCorner.CornerRadius = UDim.new(0, 8)
+	uiCorner.Parent = frame
+
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Size = UDim2.new(1, 0, 1, 0)
+	textLabel.BackgroundTransparency = 1
+	textLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+	textLabel.TextSize = 20
+	textLabel.Font = Enum.Font.GothamBold
+	textLabel.Text = "SHUTDOWN CRASHING... (15s)"
+	textLabel.Parent = frame
+
+	task.spawn(function()
+		pcall(function()
+			local dataEvents = ReplicatedStorage:WaitForChild("DataEvents", 10)
+			if dataEvents then
+				local texEvent = dataEvents:FindFirstChild("UpdateTexturesChoice")
+				if texEvent then
+					texEvent:FireServer(("Oats"):rep(1e6))
+				end
+				task.wait()
+				local dataRemote = dataEvents:FindFirstChild("DataRemoteEvent")
+				if dataRemote then
+					dataRemote:FireServer("a")
+					for _ = 1, 1e6 do
+						dataRemote:FireServer()
+					end
+				end
+			end
+		end)
+	end)
+
+	task.spawn(function()
+		for i = 15, 1, -1 do
+			textLabel.Text = "CRASHING SERVER... (" .. tostring(i) .. "s)"
+			task.wait(1)
+		end
+		textLabel.Text = "CRASH SEQUENCE COMPLETE"
+		textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+		task.wait(2)
+		screenGui:Destroy()
+	end)
+end
+
+serverGroupbox:AddButton({
+	Text = "Shutdown Server",
+	Func = function()
+		triggerServerShutdown()
+		lib:Notify({
+			Title = "<b>ASTRA</b>",
+			Description = "Server shutdown sequence triggered!",
+			BigIcon = "rbxassetid://104599341811828",
+			Time = 4,
+		})
+	end,
+})
+
+-- ===== HOME TAB =====
+local homeLeft = tabs.Home:AddLeftGroupbox("<b>A S T R A</b>", "user-round-key")
+local homeRightStats = tabs.Home:AddRightGroupbox("<b>Statistics</b>", "blinds")
+local homeRightScript = tabs.Home:AddRightGroupbox("<b>Script</b>", "code-xml")
+
+local function getGreeting()
+	local hour = tonumber(os.date("%H")) or 12
+	if hour >= 5 and hour < 12 then return "Good Morning" end
+	if hour >= 12 and hour < 17 then return "Good Afternoon" end
+	if hour >= 17 and hour < 21 then return "Good Evening" end
+	return "Good Night"
+end
+
+homeLeft:AddLabel(getGreeting() .. ", <b>" .. localPlayer.Name .. "</b>")
+homeLeft:AddLabel("Enjoy having <b>ASTRA</b>")
+homeLeft:AddLabel("All Credits To: <b>Astra Hub</b>")
+homeLeft:AddLabel("This Script is Still <b>In Development</b>")
+
+local lblTime = homeRightStats:AddLabel("Current time: <b>--:--</b>")
+homeRightStats:AddLabel("Current script version: <b>v4.649</b>")
+local lblFPS = homeRightStats:AddLabel("FPS: <b>--</b>")
+local lblPing = homeRightStats:AddLabel("Ping: <b>-- ms</b>")
+getgenv()._HomeLblFPS = lblFPS
+getgenv()._HomeLblPing = lblPing
+homeRightStats:AddDivider()
+local lblPlayers = homeRightStats:AddLabel("Players in server: <b>--</b>")
+local lblElapsed = homeRightStats:AddLabel("Elapsed time: <b>0 seconds</b>")
+local lblKicked = homeRightStats:AddLabel("Kicked players: <b>0</b>")
+
+local scriptStartTime = tick()
+local homeKickCount = 0
+
+task.spawn(function()
+	while task.wait(1) do
+		if lib.Unloaded then break end
+		local h = tonumber(os.date("%H")) or 0
+		local m = tonumber(os.date("%M")) or 0
+		pcall(function()
+			lblTime:SetText(string.format("Current time: <b>%02d:%02d</b>", h, m))
+			lblPlayers:SetText("Players in server: <b>" .. #Players:GetPlayers() .. " / 25</b>")
+			lblElapsed:SetText("Elapsed time: <b>" .. math.floor(tick() - scriptStartTime) .. " seconds</b>")
+			lblKicked:SetText("Kicked players: <b>" .. homeKickCount .. "</b>")
+		end)
+	end
+end)
+
+homeRightScript:AddButton({
+	Text = "Unload Script",
+	Func = function()
+		getgenv()._SCRIPT_LOADED = false
+		desync:CancelRequest()
+		pcall(function() lib:Unload() end)
+	end,
+})
+
+homeRightScript:AddButton({
+	Text = "Rejoin Server",
+	Func = function()
+		pcall(function()
+			if game.VIPServerId ~= "" and game.VIPServerId ~= nil then
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, localPlayer)
+			else
+				TeleportService:Teleport(game.PlaceId, localPlayer)
+			end
+		end)
+	end,
+})
+
+homeRightScript:AddButton({
+	Text = "Copy Discord Link",
+	Func = function()
+		pcall(function() setclipboard("https://discord.gg/astra") end)
+		lib:Notify({
+			Title = "<b>ASTRA</b>",
+			Description = "Copied Discord invite link.",
+			BigIcon = "rbxassetid://104599341811828",
+			Time = 2.5,
+		})
+	end,
+})
+
+homeRightScript:AddDivider()
+homeRightScript:AddCheckbox("JoinWithAntiLag", { Text = "Join With Anti Lag", Default = true })
+homeRightScript:AddCheckbox("JoinWithScript", { Text = "Join With Script", Default = false })
+
+print("ASTRA Obsidian UI loaded successfully.")
